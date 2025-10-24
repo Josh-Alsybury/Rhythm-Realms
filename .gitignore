@@ -416,3 +416,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Allow aubio's binaries
+!external/bin/
+!external/bin/**
