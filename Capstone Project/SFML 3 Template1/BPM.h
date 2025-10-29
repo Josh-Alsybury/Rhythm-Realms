@@ -1,28 +1,33 @@
-#pragma once
-#include <aubio/aubio.h>
-#include <iostream>
-class BPM
+#include <vector>
+#include <string>
+
+namespace mybpm {
+
+
+class MiniBPM
 {
 public:
-    BPM(float smoothing = 0.9f);
-    ~BPM();
+    MiniBPM(float sampleRate);
+    ~MiniBPM();
 
-    bool loadFile(const std::string& filePath);
-    void update(); 
-    float getBPM() const;
-    std::string getBPMState() const; 
-    float getIntensityMultiplier() const; 
+    void setBPMRange(double min, double max);
+    void getBPMRange(double& min, double& max) const;
+    void setBeatsPerBar(int bpb);
+    int getBeatsPerBar() const;
+    double estimateTempoOfSamples(const float* samples, int nsamples);
+    void process(const float* samples, int nsamples);
+    double estimateTempo();
+    std::vector<double> getTempoCandidates() const;
+    void reset();
+
+    double estimateTempoFromFile(const std::string& filename);
+    struct BPMCandidate { double bpm; double confidence; };
+    std::vector<BPMCandidate> getTopCandidates(int N = 3);
 
 private:
-
-    aubio_source_t* source;
-    aubio_tempo_t* tempo;
-    fvec_t* buffer;
-
-    float bpm;
-    float smoothedBPM;
-    float smoothingFactor;
-
-    void smoothBPM(float newBPM);
+    class D;
+    D *m_d;
 };
+
+}
 

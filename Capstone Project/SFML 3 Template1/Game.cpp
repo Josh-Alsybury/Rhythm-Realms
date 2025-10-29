@@ -22,12 +22,6 @@ Game::Game() :
 	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/2.png", 0.8f);
 	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/1.png", 0.5f);
 
-	m_bpmAnalyzer = BPM(0.9f);
-	if (!m_bpmAnalyzer.loadFile("ASSETS/AUDIO/your_song.wav"))
-	{
-		std::cerr << "Failed to load music file for BPM detection.\n";
-	}
-
 	m_Player.pos.x = m_window.getSize().x / 2.f;
 	setupSprites(); // load texture
 	setupTexts();   // load font
@@ -35,6 +29,15 @@ Game::Game() :
 	m_Player.HealCall();
 	m_Player.Health();
 	initNPCs();
+
+	std::cout << "Analyzing BPM..." << std::endl;
+
+	double bpm = m_bpmAnalyzer.estimateTempoFromFile("ASSETS/AUDIO/SeanPaulTemp.wav");
+
+	if (bpm > 0.0)
+		std::cout << "Detected BPM: " << bpm << std::endl;
+	else
+		std::cout << "BPM detection failed!" << std::endl;
 
 }
 
@@ -178,15 +181,6 @@ void Game::update(sf::Time t_deltaTime)
 
 	float dt = t_deltaTime.asSeconds();
 	m_Player.Update(dt);
-
-
-	m_bpmAnalyzer.update();
-
-	float intensity = m_bpmAnalyzer.getIntensityMultiplier();
-	std::string bpmState = m_bpmAnalyzer.getBPMState();
-
-	std::cout << "Current BPM: " << m_bpmAnalyzer.getBPM()
-		<< "  State: " << bpmState << std::endl;
 
 	if (m_DELETEexitGame)
 	{

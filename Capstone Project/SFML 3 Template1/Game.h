@@ -37,10 +37,6 @@ public:
 	sf::ConvexShape cone;
 
 private:
-	
-	BPM m_bpmAnalyzer;
-	float m_basePlayerSpeed = 250.f;
-	float m_baseScrollSpeed = 100.f;
 
 	sf::Vector2f m_cameraOffset{ 100.f, 0.f };
 	const float m_screenMargin = 200.f;
@@ -66,8 +62,9 @@ private:
 	std::vector<Npc> m_npcs;
 	std::vector<Background> m_backgroundLayers;
 	
+
+	mybpm::MiniBPM m_bpmAnalyzer{ 44100.0f };
 };
 
 #pragma warning( pop ) 
-#endif // !GAME_HPP
-
+#endif 
