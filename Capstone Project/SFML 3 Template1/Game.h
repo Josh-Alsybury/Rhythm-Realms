@@ -21,7 +21,7 @@
 #include "Player.h"
 #include "Npc.h"
 #include "Background.h"
-#include "BPM.h"
+#include "BpmStream.h"
 
 
 
@@ -61,9 +61,11 @@ private:
 	player m_Player;
 	std::vector<Npc> m_npcs;
 	std::vector<Background> m_backgroundLayers;
-	
+	sf::Text m_bpmText{ m_jerseyFont };
+	BpmStream m_bpmStream;
+	double m_currentBPM = 0.0;
 
-	mybpm::MiniBPM m_bpmAnalyzer{ 44100.0f };
+	mybpm::MiniBPM m_bpmAnalyzer{ static_cast<int>(44100) };
 };
 
 #pragma warning( pop ) 

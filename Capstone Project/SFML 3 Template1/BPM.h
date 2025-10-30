@@ -1,3 +1,6 @@
+#ifndef BPM_H
+#define BPM_H
+
 #include <vector>
 #include <string>
 
@@ -31,3 +34,4 @@ private:
 
 }
 
+#endif 

@@ -18,9 +18,9 @@ Game::Game() :
 	m_DELETEexitGame{false} //when true game will exit
 {
 	m_backgroundLayers.reserve(3);
-	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/3.png", 1.0f);
-	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/2.png", 0.8f);
-	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/1.png", 0.5f);
+	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/3.png", 0.2f);
+	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/2.png", 0.6f);
+	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/1.png", 0.8f);
 
 	m_Player.pos.x = m_window.getSize().x / 2.f;
 	setupSprites(); // load texture
@@ -29,10 +29,11 @@ Game::Game() :
 	m_Player.HealCall();
 	m_Player.Health();
 	initNPCs();
+	setupAudio();
 
 	std::cout << "Analyzing BPM..." << std::endl;
 
-	double bpm = m_bpmAnalyzer.estimateTempoFromFile("ASSETS/AUDIO/SeanPaulTemp.wav");
+	double bpm = m_bpmAnalyzer.estimateTempoFromFile("ASSETS/AUDIO/Starjunk95OceanMemory.wav");
 
 	if (bpm > 0.0)
 		std::cout << "Detected BPM: " << bpm << std::endl;
@@ -134,6 +135,8 @@ void Game::update(sf::Time t_deltaTime)
 {
 	checkKeyboardState();
 
+	m_currentBPM = m_bpmStream.getCurrentBPM();
+	m_bpmText.setString("Live BPM: " + std::to_string(static_cast<int>(m_currentBPM)));
 
 	sf::Vector2f direction{ 0.0f, 0.0f };
 
@@ -213,6 +216,7 @@ void Game::render()
 		m_window.draw(bar);
 	}
 	m_window.draw(*m_Player.sprite);
+	m_window.draw(m_bpmText);
 	m_window.display();
 }
 
@@ -241,7 +245,22 @@ void Game::setupSprites()
 /// </summary>
 void Game::setupAudio()
 {
+	std::cout << "Loading audio file..." << std::endl;
 
+	if (!m_bpmStream.load("ASSETS/AUDIO/Starjunk95OceanMemory.wav"))
+	{
+		std::cerr << "Failed to load audio file!" << std::endl;
+		std::cerr << "Make sure the file exists and is a valid WAV file" << std::endl;
+		return;
+	}
+
+	std::cout << "Audio loaded successfully, starting playback..." << std::endl;
+	m_bpmStream.play();
+
+	m_bpmText.setCharacterSize(32);
+	m_bpmText.setFillColor(sf::Color::White);
+	m_bpmText.setPosition(sf::Vector2f(50.f, 50.f));
+	m_bpmText.setString("Live BPM: 0.0");
 }
 
 void Game::initNPCs()
