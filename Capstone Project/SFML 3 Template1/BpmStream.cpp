@@ -7,10 +7,13 @@ BpmStream::BpmStream()
     : m_bpmDetector(44100.0f)
 {
     m_floatBuffer.resize(8192);
+    m_bpmDetector.setBPMRange(60.0, 180.0);
 }
 
 bool BpmStream::load(const std::string& filename)
 {
+    stop();
+
     if (!m_buffer.loadFromFile(filename))
     {
         std::cerr << "Failed to load file: " << filename << std::endl;
@@ -45,46 +48,70 @@ bool BpmStream::load(const std::string& filename)
     }
     SoundStream::initialize(channelCount, sampleRate, channelMap);
 
+    m_bpmDetector.reset();
+    m_currentBpm = 0.0;
+
+    analyzeBPM();
+
+
     return true;
 }
 
 void BpmStream::analyzeBPM()
 {
-
     std::cout << "Analyzing BPM... (this may take a moment)" << std::endl;
-
-    // sample size ( first 30 seconds)
     unsigned int sampleRate = m_buffer.getSampleRate();
     unsigned int channelCount = m_buffer.getChannelCount();
     size_t samplesPerSecond = sampleRate * channelCount;
-    size_t samplesToAnalyze = std::min(m_totalSamples, samplesPerSecond * 30); // 30 seconds max
+    size_t samplesToAnalyze = std::min(m_totalSamples, samplesPerSecond * 30);
 
-    // Convert samples to float
     std::vector<float> floatSamples(samplesToAnalyze);
     for (size_t i = 0; i < samplesToAnalyze; ++i)
     {
         floatSamples[i] = m_samples[i] / 32768.0f;
     }
-
-    // Analyze the entire chunk at once for BPM
     m_currentBpm = m_bpmDetector.estimateTempoOfSamples(floatSamples.data(), static_cast<int>(samplesToAnalyze));
-    std::cout << "BPM Analysis complete: " << m_currentBpm << " BPM" << std::endl;
+    auto candidates = m_bpmDetector.getTempoCandidates();
 
-    //multiple candidates to show confidence
-    auto candidates = m_bpmDetector.getTopCandidates(3);
-    if (!candidates.empty())
+    std::cout << "All BPM candidates:" << std::endl;
+    for (size_t i = 0; i < candidates.size() && i < 5; ++i)
     {
-        std::cout << "Top BPM candidates:" << std::endl;
-        for (const auto& candidate : candidates)
+        std::cout << "  Candidate " << i + 1 << ": " << candidates[i] << " BPM" << std::endl;
+    }
+
+    //top BPM is above 140
+    if (m_currentBpm > 140.0 && candidates.size() >= 2)
+    {
+        double halfBpm = m_currentBpm / 2.0;
+        // Check if the SECOND candidate is close to half (within 2 BPM)
+        if (std::abs(candidates[1] - halfBpm) < 2.0)
         {
-            std::cout << "  " << candidate.bpm << " BPM (confidence: " << candidate.confidence << ")" << std::endl;
+            std::cout << "Detected double-time! Using half BPM: " << candidates[1] << std::endl;
+            m_currentBpm = candidates[1];
+        }
+        else
+        {
+            std::cout << "Keeping original BPM: " << m_currentBpm << std::endl;
         }
     }
+    else
+    {
+        std::cout << "Using detected BPM: " << m_currentBpm << std::endl;
+    }
+    std::cout << "Final BPM: " << m_currentBpm << " BPM" << std::endl;
 }
 
 double BpmStream::getCurrentBPM() const
 {
     return m_currentBpm;
+}
+
+void BpmStream::reset()
+{
+    m_bpmDetector.reset();
+    m_currentBpm = 0.0;
+    m_offset = 0;
+    m_chunkCounter = 0;
 }
 
 bool BpmStream::onGetData(Chunk& data)
@@ -95,21 +122,9 @@ bool BpmStream::onGetData(Chunk& data)
         return false;
 
     size_t remaining = std::min<size_t>(CHUNK_SIZE, m_totalSamples - m_offset);
+
     data.samples = m_samples + m_offset;
     data.sampleCount = remaining;
-
-    // Only update BPM every 30 chunks (~0.5 seconds) to reduce CPU load
-    if (++m_chunkCounter >= 30)
-    {
-        m_chunkCounter = 0;
-
-        if (m_floatBuffer.size() < remaining)
-            m_floatBuffer.resize(remaining);
-        for (size_t i = 0; i < remaining; ++i)
-            m_floatBuffer[i] = m_samples[m_offset + i] / 32768.0f;
-        m_bpmDetector.process(m_floatBuffer.data(), static_cast<int>(remaining));
-        m_currentBpm = m_bpmDetector.estimateTempo();
-    }
 
     m_offset += remaining;
     return true;

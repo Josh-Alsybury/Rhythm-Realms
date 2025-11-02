@@ -22,6 +22,7 @@
     <ClCompile Include="Background.cpp" />
     <ClCompile Include="BPM.cpp" />
     <ClCompile Include="BpmStream.cpp" />
+    <ClCompile Include="DynamicBackground.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Npc.cpp" />
@@ -31,6 +32,7 @@
     <ClInclude Include="Background.h" />
     <ClInclude Include="BPM.h" />
     <ClInclude Include="BpmStream.h" />
+    <ClInclude Include="DynamicBackground.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Npc.h" />
     <ClInclude Include="Player.h" />

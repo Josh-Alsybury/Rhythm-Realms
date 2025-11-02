@@ -20,7 +20,7 @@
 #include <SFML/Audio.hpp>
 #include "Player.h"
 #include "Npc.h"
-#include "Background.h"
+#include "DynamicBackground.h"
 #include "BpmStream.h"
 
 
@@ -37,6 +37,8 @@ public:
 	sf::ConvexShape cone;
 
 private:
+	DynamicBackground m_dynamicBackground;
+	std::string m_currentTheme = "Forest";
 
 	sf::Vector2f m_cameraOffset{ 100.f, 0.f };
 	const float m_screenMargin = 200.f;
@@ -45,6 +47,7 @@ private:
 	void processKeys(const std::optional<sf::Event> t_event);
 	void checkKeyboardState();
 	void update(sf::Time t_deltaTime);
+	void switchSong();
 	void render();
 	
 	void setupTexts();
@@ -60,10 +63,11 @@ private:
 
 	player m_Player;
 	std::vector<Npc> m_npcs;
-	std::vector<Background> m_backgroundLayers;
 	sf::Text m_bpmText{ m_jerseyFont };
 	BpmStream m_bpmStream;
 	double m_currentBPM = 0.0;
+	std::vector<std::string> m_songPaths;
+	size_t m_currentSongIndex;
 
 	mybpm::MiniBPM m_bpmAnalyzer{ static_cast<int>(44100) };
 };

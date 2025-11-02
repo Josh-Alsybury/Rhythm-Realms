@@ -17,10 +17,7 @@ Game::Game() :
 	m_window{ sf::VideoMode{ sf::Vector2u{1000U, 800U}, 32U }, "SFML Game 3.0" },
 	m_DELETEexitGame{false} //when true game will exit
 {
-	m_backgroundLayers.reserve(3);
-	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/3.png", 0.2f);
-	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/2.png", 0.6f);
-	m_backgroundLayers.emplace_back("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background/1.png", 0.8f);
+	m_dynamicBackground.loadtheme("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
 
 	m_Player.pos.x = m_window.getSize().x / 2.f;
 	setupSprites(); // load texture
@@ -30,16 +27,6 @@ Game::Game() :
 	m_Player.Health();
 	initNPCs();
 	setupAudio();
-
-	std::cout << "Analyzing BPM..." << std::endl;
-
-	double bpm = m_bpmAnalyzer.estimateTempoFromFile("ASSETS/AUDIO/Starjunk95OceanMemory.wav");
-
-	if (bpm > 0.0)
-		std::cout << "Detected BPM: " << bpm << std::endl;
-	else
-		std::cout << "BPM detection failed!" << std::endl;
-
 }
 
 /// <summary>
@@ -110,6 +97,10 @@ void Game::processKeys(const std::optional<sf::Event> t_event)
 	{
 		m_DELETEexitGame = true; 
 	}
+	if (sf::Keyboard::Key::N == newKeypress->code)
+	{
+		switchSong();
+	}
 }
 
 /// <summary>
@@ -136,6 +127,22 @@ void Game::update(sf::Time t_deltaTime)
 	checkKeyboardState();
 
 	m_currentBPM = m_bpmStream.getCurrentBPM();
+
+	if (m_currentBPM > 0.0)
+	{
+		if (m_currentBPM < 90.0 && m_currentTheme != "Medieval")
+		{
+			std::cout << "Transitioning to Medieval theme (BPM: " << m_currentBPM << ")" << std::endl;
+			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Background");  // Use transitionTo!
+			m_currentTheme = "Medieval";
+		}
+		else if (m_currentBPM >= 90.0 && m_currentTheme != "Forest")
+		{
+			std::cout << "Transitioning to Forest theme (BPM: " << m_currentBPM << ")" << std::endl;
+			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");  // Use transitionTo!
+			m_currentTheme = "Forest";
+		}
+	}
 	m_bpmText.setString("Live BPM: " + std::to_string(static_cast<int>(m_currentBPM)));
 
 	sf::Vector2f direction{ 0.0f, 0.0f };
@@ -177,11 +184,7 @@ void Game::update(sf::Time t_deltaTime)
 	else if (playerScreenX < leftMargin)
 		m_cameraOffset.x -= leftMargin - playerScreenX;
 
-	for (auto& layer : m_backgroundLayers)
-	{
-		layer.setOffset(m_cameraOffset);
-	}
-
+	m_dynamicBackground.update(m_cameraOffset);
 	float dt = t_deltaTime.asSeconds();
 	m_Player.Update(dt);
 
@@ -191,6 +194,24 @@ void Game::update(sf::Time t_deltaTime)
 	}
 }
 
+void Game::switchSong()
+{
+	m_currentSongIndex = (m_currentSongIndex + 1) % m_songPaths.size();
+
+	m_bpmStream.stop();
+
+	std::cout << "Switching to song " << m_currentSongIndex + 1 << "..." << std::endl;
+
+	if (m_bpmStream.load(m_songPaths[m_currentSongIndex]))
+	{
+		m_bpmStream.play();
+		std::cout << "Song loaded successfully!" << std::endl;
+	}
+	else
+	{
+		std::cerr << "Failed to load song!" << std::endl;
+	}
+}
 
 /// <summary>
 /// draw the frame and then switch buffers
@@ -201,10 +222,7 @@ void Game::render()
 
 	sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
 	m_Player.sprite->setPosition(renderPos);
-	for (auto& layer : m_backgroundLayers)
-	{
-		layer.render(m_window);
-	}
+	m_dynamicBackground.render(m_window);
 
 	for (int i = 0; i < m_Player.HealsCount; i++)
 	{
@@ -245,12 +263,18 @@ void Game::setupSprites()
 /// </summary>
 void Game::setupAudio()
 {
+	m_songPaths = {
+		"ASSETS/AUDIO/Starjunk95OceanMemory.wav",  
+		"ASSETS/AUDIO/Moorland.wav",                 
+		"ASSETS/AUDIO/MediumSong.wav"                
+	};
+	m_currentSongIndex = 0;
+
 	std::cout << "Loading audio file..." << std::endl;
 
-	if (!m_bpmStream.load("ASSETS/AUDIO/Starjunk95OceanMemory.wav"))
+	if (!m_bpmStream.load(m_songPaths[m_currentSongIndex]))
 	{
-		std::cerr << "Failed to load audio file!" << std::endl;
-		std::cerr << "Make sure the file exists and is a valid WAV file" << std::endl;
+		std::cerr << "Failed to load initial audio file!" << std::endl;
 		return;
 	}
 

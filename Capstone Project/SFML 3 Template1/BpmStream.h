@@ -15,6 +15,7 @@ public:
     bool load(const std::string& filename);
     void analyzeBPM();
     double getCurrentBPM() const;
+    void reset();
 
 protected:
     virtual bool onGetData(Chunk& data) override;
