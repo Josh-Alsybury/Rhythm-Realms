@@ -79,11 +79,9 @@ void BpmStream::analyzeBPM()
         std::cout << "  Candidate " << i + 1 << ": " << candidates[i] << " BPM" << std::endl;
     }
 
-    //top BPM is above 140
     if (m_currentBpm > 140.0 && candidates.size() >= 2)
     {
         double halfBpm = m_currentBpm / 2.0;
-        // Check if the SECOND candidate is close to half (within 2 BPM)
         if (std::abs(candidates[1] - halfBpm) < 2.0)
         {
             std::cout << "Detected double-time! Using half BPM: " << candidates[1] << std::endl;

@@ -1,3 +1,7 @@
+cd ./vcpkg, ./bootstrap-vcpkg.bat, ./vcpkg integrate install, ./vcpkg install cpr
+
+
+
 https://accounts.spotify.com/authorize?client_id=28e081af3dfc453296f07c23ffe6d88f&response_type=code&redirect_uri=http%3A%2F%2F127.0.0.1%3A8888%2Fcallback&scope=user-read-currently-playing%20user-read-playback-state&state=abc123xyz
 
 

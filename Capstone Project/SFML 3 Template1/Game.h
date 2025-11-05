@@ -60,7 +60,6 @@ private:
 	sf::Text m_formationHintText{ m_jerseyFont };
 
 	bool m_DELETEexitGame; // control exiting game
-
 	player m_Player;
 	std::vector<Npc> m_npcs;
 	sf::Text m_bpmText{ m_jerseyFont };

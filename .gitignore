@@ -420,3 +420,9 @@ FodyWeavers.xsd
 # Allow aubio's binaries
 !external/bin/
 !external/bin/**
+
+# vcpkg build artifacts
+vcpkg/buildtrees/
+vcpkg/downloads/
+vcpkg/packages/
+vcpkg/installed/

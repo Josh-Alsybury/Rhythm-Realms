@@ -4,28 +4,37 @@
 
 void player::Jump()
 {
-    if (isOnGround)
-        velocity.y -= 90;
+    if (isHealing == false)
+    {
+        if (isOnGround)
+            velocity.y -= 90;
         isJump = true;
         isOnGround = false;
         state = PlayerState::Jump_start;
+    }
 }
 
 void player::moveLeft()
 {
-    velocity.x -= speed;
-    if (facingRight) {
-        facingRight = false;
-        sprite->setScale(sf::Vector2f( - std::abs(sprite->getScale().x), sprite->getScale().y));
+    if (isHealing == false)
+    {
+        velocity.x -= speed;
+        if (facingRight) {
+            facingRight = false;
+            sprite->setScale(sf::Vector2f(-std::abs(sprite->getScale().x), sprite->getScale().y));
+        }
     }
 }
 
 void player::moveRight()
 {
-    velocity.x += speed;
-    if (!facingRight) {
-        facingRight = true;
-        sprite->setScale(sf::Vector2f(std::abs(sprite->getScale().x), sprite->getScale().y));
+    if (isHealing == false)
+    {
+        velocity.x += speed;
+        if (!facingRight) {
+            facingRight = true;
+            sprite->setScale(sf::Vector2f(std::abs(sprite->getScale().x), sprite->getScale().y));
+        }
     }
 }
 
