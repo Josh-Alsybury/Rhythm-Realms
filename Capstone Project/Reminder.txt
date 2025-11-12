@@ -1,0 +1,2 @@
+figure out map, sort out next steps for enemy usage, spotify api pulling data in test next, bosses ?, npcs to trade ?, skill tree maybe
+ more comments for my code
