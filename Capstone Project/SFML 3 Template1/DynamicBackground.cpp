@@ -1,4 +1,4 @@
-#include "DynamicBackground.h"
+#include "Headers/DynamicBackground.h"
 
 bool DynamicBackground::loadtheme(const std::string& folderPath)
 {

@@ -1,5 +1,5 @@
-
-#include "BPM.h"
+///////////////////////////////////////
+#include "Headers/BPM.h"
 
 #include <vector>
 #include <map>
@@ -607,33 +607,11 @@ namespace mybpm {
     {
         m_d->reset();
     }
-
-    double mybpm::MiniBPM::estimateTempoFromFile(const std::string& filename)
-    {
-        sf::SoundBuffer buffer{};
-        if (!buffer.loadFromFile(filename))
-        {
-            std::cerr << "Error: Could not load audio file: " << filename << std::endl;
-            return 0.0; // fail audio load
-        }
-
-        const int16_t* samples = buffer.getSamples();
-        int sampleCount = buffer.getSampleCount();
-
-        std::vector<float> floatSamples(sampleCount);
-        for (int i = 0; i < sampleCount; ++i)
-        {
-            floatSamples[i] = samples[i] / 32768.0f; // normalize
-        }
-
-        return estimateTempoOfSamples(floatSamples.data(), sampleCount);
-    }
+//////////////////////////////////////////////////
+// everything above this line is to the credit of minibpm creator breakfastquay ///////
 
 
-    std::vector<mybpm::MiniBPM::BPMCandidate> mybpm::MiniBPM::getTopCandidates(int N)
-    {
-        return std::vector<mybpm::MiniBPM::BPMCandidate>();
-    }
+    
 
 
 

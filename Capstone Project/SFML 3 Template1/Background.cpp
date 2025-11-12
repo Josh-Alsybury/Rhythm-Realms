@@ -1,4 +1,4 @@
-#include "Background.h"
+#include "Headers/Background.h"
 #include <stdexcept>
 
 Background::Background(const std::string& filePath, float parallaxFactor, int layerIndex)

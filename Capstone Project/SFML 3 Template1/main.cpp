@@ -22,7 +22,7 @@
 #endif 
 
 #include <iostream>
-#include "Game.h"
+#include "Headers/Game.h"
 
 /// <summary>
 /// main enrtry point

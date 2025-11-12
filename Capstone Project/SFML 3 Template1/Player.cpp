@@ -1,4 +1,4 @@
-﻿#include "Player.h"
+﻿#include "Headers/Player.h"
 #include <cmath> 
 
 
@@ -60,7 +60,6 @@ void player::Heal()
         state = PlayerState::Healing;
     }
 }
-
 
 void player::AnimatePlayer()
 {
@@ -236,6 +235,15 @@ void player::Update(float dt)
     {
         isOnGround = false;
     }
+
+    float hitboxOffsetX = facingRight ? 60.f : -60.f;
+    attackHitbox.setPosition(sf::Vector2f(pos.x + hitboxOffsetX, pos.y));
+
+    // Only allow damage during attack animation frames 2-4 (adjust as needed)
+    if (state == PlayerState::Attack && m_frameNow >= 2 && m_frameNow <= 4)
+        canDamageEnemy = true;
+    else
+        canDamageEnemy = false;
 
     sprite->setPosition(pos);
 }

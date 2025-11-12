@@ -19,25 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Background.cpp" />
-    <ClCompile Include="BPM.cpp" />
-    <ClCompile Include="BpmStream.cpp" />
-    <ClCompile Include="DynamicBackground.cpp" />
-    <ClCompile Include="Game.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="Npc.cpp" />
-    <ClCompile Include="Player.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Background.h" />
-    <ClInclude Include="BPM.h" />
-    <ClInclude Include="BpmStream.h" />
-    <ClInclude Include="DynamicBackground.h" />
-    <ClInclude Include="Game.h" />
-    <ClInclude Include="Npc.h" />
-    <ClInclude Include="Player.h" />
-  </ItemGroup>
-  <ItemGroup>
     <Image Include="ASSETS\IMAGES\SFML-LOGO.png">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
@@ -48,6 +29,27 @@
   </ItemGroup>
   <ItemGroup>
     <Media Include="ASSETS\AUDIO\beep.wav" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Enemy1.h" />
+    <ClInclude Include="Headers\Background.h" />
+    <ClInclude Include="Headers\BPM.h" />
+    <ClInclude Include="Headers\BpmStream.h" />
+    <ClInclude Include="Headers\DynamicBackground.h" />
+    <ClInclude Include="Headers\Game.h" />
+    <ClInclude Include="Headers\Npc.h" />
+    <ClInclude Include="Headers\Player.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Background.cpp" />
+    <ClCompile Include="BPM.cpp" />
+    <ClCompile Include="BpmStream.cpp" />
+    <ClCompile Include="DynamicBackground.cpp" />
+    <ClCompile Include="Enemy1.cpp" />
+    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Npc.cpp" />
+    <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

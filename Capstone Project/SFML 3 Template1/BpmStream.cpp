@@ -1,4 +1,4 @@
-#include "BpmStream.h"
+#include "Headers/BpmStream.h"
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -66,10 +66,11 @@ void BpmStream::analyzeBPM()
     size_t samplesToAnalyze = std::min(m_totalSamples, samplesPerSecond * 30);
 
     std::vector<float> floatSamples(samplesToAnalyze);
-    for (size_t i = 0; i < samplesToAnalyze; ++i)
+    for (size_t i = 0; i < samplesToAnalyze; ++i) // takes samples and normalises
     {
         floatSamples[i] = m_samples[i] / 32768.0f;
     }
+
     m_currentBpm = m_bpmDetector.estimateTempoOfSamples(floatSamples.data(), static_cast<int>(samplesToAnalyze));
     auto candidates = m_bpmDetector.getTempoCandidates();
 
@@ -78,18 +79,33 @@ void BpmStream::analyzeBPM()
     {
         std::cout << "  Candidate " << i + 1 << ": " << candidates[i] << " BPM" << std::endl;
     }
-
-    if (m_currentBpm > 140.0 && candidates.size() >= 2)
+    // Check if the top candidate has a strong half-tempo
+    if (candidates.size() >= 2)
     {
-        double halfBpm = m_currentBpm / 2.0;
-        if (std::abs(candidates[1] - halfBpm) < 2.0)
+        double ratio = m_currentBpm / candidates[1];
+
+        // If the ratio is close to 2:1, we have a double-time detection (counting the wrong rhythmic layer)
+        if (ratio >= 1.95 && ratio <= 2.05)
         {
-            std::cout << "Detected double-time! Using half BPM: " << candidates[1] << std::endl;
-            m_currentBpm = candidates[1];
+            // Check if the second candidate is in a more typical range
+            // 60-140 BPM
+            // and candidate 1 is high (>150)
+            if (candidates[1] >= 60.0 && candidates[1] <= 140.0 && m_currentBpm > 150.0)
+            {
+                std::cout << "Detected likely double-time (ratio: " << ratio
+                    << "), using half BPM: " << candidates[1] << std::endl;
+                m_currentBpm = candidates[1];
+            }
+            else
+            {
+                std::cout << "Keeping original BPM: " << m_currentBpm
+                    << " (ratio: " << ratio << " but in acceptable range)" << std::endl;
+            }
         }
         else
         {
-            std::cout << "Keeping original BPM: " << m_currentBpm << std::endl;
+            std::cout << "Using detected BPM: " << m_currentBpm
+                << " (ratio to candidate 2: " << ratio << ")" << std::endl;
         }
     }
     else
@@ -97,6 +113,9 @@ void BpmStream::analyzeBPM()
         std::cout << "Using detected BPM: " << m_currentBpm << std::endl;
     }
     std::cout << "Final BPM: " << m_currentBpm << " BPM" << std::endl;
+
+// Check if top candidate is double-time error: if ratio to 2nd candidate = 2.0
+// and primary > 150 BPM while secondary is in typical range (60-140), use secondary
 }
 
 double BpmStream::getCurrentBPM() const

@@ -2,7 +2,7 @@
 /// author Pete Lowe May 2025
 /// you need to change the above line or lose marks
 /// </summary>
-#include "Game.h"
+#include "Headers/Game.h"
 #include <iostream>
 
 
@@ -25,6 +25,12 @@ Game::Game() :
 	m_Player.SetupPlayer();
 	m_Player.HealCall();
 	m_Player.Health();
+
+	m_enemies.emplace_back();              // adds a new Enemy1 to the vector
+	m_enemies.back().SetupEnemy1();        // setup the last added enemy
+	m_enemies.back().pos = { 850.f, 780.f };
+	m_enemies.back().sprite->setPosition(m_enemies.back().pos);
+
 	initNPCs();
 	setupAudio();
 }
@@ -53,7 +59,7 @@ void Game::run()
 	sf::Time timePerFrame = sf::seconds(1.0f / fps); // 60 fps
 	while (m_window.isOpen())
 	{
-		processEvents(); // as many as possible
+		processEvents(); 
 		timeSinceLastUpdate += clock.restart();
 		while (timeSinceLastUpdate > timePerFrame)
 		{
@@ -61,7 +67,7 @@ void Game::run()
 			processEvents(); // at least 60 fps
 			update(timePerFrame); //60 fps
 		}
-		render(); // as many as possible
+		render(); 
 	}
 }
 /// <summary>
@@ -78,7 +84,7 @@ void Game::processEvents()
 		{
 			m_DELETEexitGame = true;
 		}
-		if (newEvent->is<sf::Event::KeyPressed>()) //user pressed a key
+		if (newEvent->is<sf::Event::KeyPressed>()) 
 		{
 			processKeys(newEvent);
 		}
@@ -136,7 +142,7 @@ void Game::update(sf::Time t_deltaTime)
 			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Background");  // Use transitionTo!
 			m_currentTheme = "Medieval";
 		}
-		else if (m_currentBPM >= 90.0 && m_currentTheme != "Forest")
+		else if (m_currentBPM >= 90.0 && m_currentBPM <= 150.0 && m_currentTheme != "Forest")
 		{
 			std::cout << "Transitioning to Forest theme (BPM: " << m_currentBPM << ")" << std::endl;
 			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");  // Use transitionTo!
@@ -192,6 +198,52 @@ void Game::update(sf::Time t_deltaTime)
 	{
 		m_window.close();
 	}
+
+	for (auto& enemy : m_enemies)
+	{
+
+		enemy.Update(dt, m_Player.pos);
+
+		// Check player attacking enemy
+		if (m_Player.canDamageEnemy)
+		{
+			float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
+			float dy = m_Player.attackHitbox.getPosition().y - enemy.pos.y;
+			float distance = std::sqrt(dx * dx + dy * dy);
+
+			if (distance < m_Player.attackHitboxRadius + 30.f)  // 30f = rough enemy body size
+			{
+				enemy.TakeDamage(1);
+				m_Player.canDamageEnemy = false;  // Prevent multi-hit in same attack
+
+				if (enemy.health <= 0)
+				{
+					std::cout << "Enemy defeated!" << std::endl;
+
+					distance += 200.f ;
+					m_enemies.back().pos = { 850.f + distance, 780.f };
+					m_enemies.back().sprite->setPosition(m_enemies.back().pos);
+				}
+			}
+		}
+
+		// Check enemy attacking player
+		if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
+		{
+			float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
+			float dy = enemy.attackHitbox.getPosition().y - m_Player.pos.y;
+			float distance = std::sqrt(dx * dx + dy * dy);
+
+			if (distance < enemy.attackHitboxRadius + 30.f)
+			{
+				m_Player.TakeDamage(1);
+				enemy.hasDealtDamage = true;  // Mark that damage was dealt
+				enemy.canDamagePlayer = false;  // Disable further damage this attack
+				std::cout << "Player hit! Health: " << m_Player.health << std::endl;
+			}
+		}
+	}
+
 }
 
 void Game::switchSong()
@@ -233,6 +285,29 @@ void Game::render()
 	{
 		m_window.draw(bar);
 	}
+
+	for (auto& enemy : m_enemies)
+	{
+		// Apply camera offset to enemy rendering
+		sf::Vector2f enemyRenderPos = enemy.pos - m_cameraOffset;
+		enemy.sprite->setPosition(enemyRenderPos);
+
+		// Also offset the debug circles
+		enemy.detectionRadius.setPosition(enemyRenderPos);
+		enemy.attackRadius.setPosition(enemyRenderPos);
+
+		m_window.draw(enemy.detectionRadius);
+		m_window.draw(enemy.attackRadius);
+		m_window.draw(*enemy.sprite);
+
+		for (auto& bar : enemy.healthBar)
+		{
+			sf::RectangleShape offsetBar = bar;
+			offsetBar.setPosition(bar.getPosition() - m_cameraOffset);
+			m_window.draw(offsetBar);
+		}
+	}
+
 	m_window.draw(*m_Player.sprite);
 	m_window.draw(m_bpmText);
 	m_window.display();
@@ -264,9 +339,9 @@ void Game::setupSprites()
 void Game::setupAudio()
 {
 	m_songPaths = {
-		"ASSETS/AUDIO/Starjunk95OceanMemory.wav",  
+		"ASSETS/AUDIO/ThemeofAmaterasu.wav",  
 		"ASSETS/AUDIO/Moorland.wav",                 
-		"ASSETS/AUDIO/MediumSong.wav"                
+		"ASSETS/AUDIO/Starjunk95OceanMemory.wav"                
 	};
 	m_currentSongIndex = 0;
 
@@ -279,6 +354,7 @@ void Game::setupAudio()
 	}
 
 	std::cout << "Audio loaded successfully, starting playback..." << std::endl;
+	m_bpmStream.setVolume(0.0f);
 	m_bpmStream.play();
 
 	m_bpmText.setCharacterSize(32);
@@ -289,15 +365,6 @@ void Game::setupAudio()
 
 void Game::initNPCs()
 {
-	m_npcs.resize(4);
+	
 
-	for (size_t i = 0; i < m_npcs.size(); ++i)
-	{
-		m_npcs[i].SetupNpc();
-	}
-
-	m_npcs[0].pos = { 200.f, 100.f };
-	m_npcs[1].pos = { 400.f, 200.f };
-	m_npcs[2].pos = { 600.f, 200.f };
-	m_npcs[3].pos = { 800.f, 100.f };
 }
