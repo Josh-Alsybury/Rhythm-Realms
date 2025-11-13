@@ -18,7 +18,7 @@ void player::moveLeft()
 {
     if (isHealing == false)
     {
-        velocity.x -= speed;
+        velocity.x =  -speed;
         if (facingRight) {
             facingRight = false;
             sprite->setScale(sf::Vector2f(-std::abs(sprite->getScale().x), sprite->getScale().y));
@@ -30,7 +30,7 @@ void player::moveRight()
 {
     if (isHealing == false)
     {
-        velocity.x += speed;
+        velocity.x = +speed;
         if (!facingRight) {
             facingRight = true;
             sprite->setScale(sf::Vector2f(std::abs(sprite->getScale().x), sprite->getScale().y));
@@ -211,17 +211,6 @@ void player::Update(float dt)
 
     velocity.y += gravity * dt;
 
-    if (isOnGround)
-    {
-        if (velocity.x > 0)
-            velocity.x -= friction * dt;
-        else if (velocity.x < 0)
-            velocity.x += friction * dt;
-
-        if (std::abs(velocity.x) < 1.f)
-            velocity.x = 0.f;
-    }
-
     pos += velocity * dt;
     sprite->setPosition(pos);
 
@@ -234,6 +223,14 @@ void player::Update(float dt)
     else
     {
         isOnGround = false;
+    }
+
+    if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) &&
+        !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) &&
+        !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) &&
+        !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+    {
+        velocity.x = 0.f;  // Instant stop
     }
 
     float hitboxOffsetX = facingRight ? 60.f : -60.f;

@@ -29,7 +29,6 @@ public:
 
     float speed = 200.f;       
     float maxSpeed = 550.f;    
-    float friction = 600.f;    
     float gravity = 50.f;
     float Groundlevel = 740.f;
 
