@@ -236,11 +236,17 @@ void player::Update(float dt)
     float hitboxOffsetX = facingRight ? 60.f : -60.f;
     attackHitbox.setPosition(sf::Vector2f(pos.x + hitboxOffsetX, pos.y));
 
-    // Only allow damage during attack animation frames 2-4 (adjust as needed)
-    if (state == PlayerState::Attack && m_frameNow >= 2 && m_frameNow <= 4)
+    // Only allow damage during attack anim frame 3-5
+    if (state == PlayerState::Attack && m_frameNow >= 3 && m_frameNow <= 5)
         canDamageEnemy = true;
     else
         canDamageEnemy = false;
+    // Only allow block during defend animframe 1-3
+    if (state == PlayerState::Defend && m_frameNow >= 1 && m_frameNow <= 5)
+        canBlockEnemy = true;
+    else
+        canBlockEnemy = false;
+
 
     sprite->setPosition(pos);
 }

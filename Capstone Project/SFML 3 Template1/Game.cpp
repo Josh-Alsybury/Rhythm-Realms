@@ -226,7 +226,6 @@ void Game::update(sf::Time t_deltaTime)
 				}
 			}
 		}
-
 		// Check enemy attacking player
 		if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
 		{
@@ -234,11 +233,25 @@ void Game::update(sf::Time t_deltaTime)
 			float dy = enemy.attackHitbox.getPosition().y - m_Player.pos.y;
 			float distance = std::sqrt(dx * dx + dy * dy);
 
-			if (distance < enemy.attackHitboxRadius + 30.f)
+			if (m_Player.canBlockEnemy)
 			{
+				std::cout << "Attack blocked!" << std::endl;
+				float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
+
+				m_Player.velocity.x = knockbackDirection * 1.f;
+
+				if(m_Player.isOnGround)
+					m_Player.velocity.y = -30.f;
+
+				enemy.hasDealtDamage = true;
+				enemy.canDamagePlayer = false;
+			}
+			else
+			{
+				// Block failed - take damage
 				m_Player.TakeDamage(1);
-				enemy.hasDealtDamage = true;  // Mark that damage was dealt
-				enemy.canDamagePlayer = false;  // Disable further damage this attack
+				enemy.hasDealtDamage = true;
+				enemy.canDamagePlayer = false;
 				std::cout << "Player hit! Health: " << m_Player.health << std::endl;
 			}
 		}

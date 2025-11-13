@@ -46,6 +46,10 @@ public:
     float attackHitboxRadius = 50.f;
     bool canDamageEnemy = false;
 
+    sf::CircleShape BlockHitbox;
+    float BlockhitboxRadius = 100.f;
+    bool canBlockEnemy = false;
+
     void SetupPlayer()
     {
         if (!idleTexture.loadFromFile("ASSETS/IMAGES/Sprites/IDLE.png"))
@@ -124,6 +128,10 @@ public:
         attackHitbox.setRadius(attackHitboxRadius);
         attackHitbox.setOrigin(sf::Vector2f(attackHitboxRadius, attackHitboxRadius));
         attackHitbox.setFillColor(sf::Color(255, 0, 0, 80));
+
+        BlockHitbox.setRadius(BlockhitboxRadius);
+        BlockHitbox.setOrigin(sf::Vector2f(BlockhitboxRadius, BlockhitboxRadius));
+        BlockHitbox.setFillColor(sf::Color(255, 0, 0, 80));
 
         sprite = std::make_unique<sf::Sprite>(idleTexture);
         sprite->setScale(sf::Vector2f(1.8f, 1.8f));
