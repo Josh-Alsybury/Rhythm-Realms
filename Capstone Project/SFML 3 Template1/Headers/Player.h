@@ -50,6 +50,10 @@ public:
     float BlockhitboxRadius = 100.f;
     bool canBlockEnemy = false;
 
+    bool isKnockedBack = false;
+    float knockbackTimer = 0.0f;
+    const float KNOCKBACK_DURATION = 0.5f;
+
     void SetupPlayer()
     {
         if (!idleTexture.loadFromFile("ASSETS/IMAGES/Sprites/IDLE.png"))

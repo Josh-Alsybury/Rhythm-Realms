@@ -26,12 +26,17 @@ Game::Game() :
 	m_Player.HealCall();
 	m_Player.Health();
 
-	m_enemies.emplace_back();              // adds a new Enemy1 to the vector
-	m_enemies.back().SetupEnemy1();        // setup the last added enemy
-	m_enemies.back().pos = { 850.f, 780.f };
-	m_enemies.back().sprite->setPosition(m_enemies.back().pos);
+	m_enemies.reserve(2);  // Pre-allocate for exactly 2
 
-	initNPCs();
+	// Initialize both enemies
+	for (int i = 0; i < 2; ++i)
+	{
+		m_enemies.emplace_back(); // adds a new Enemy1 to the vector
+		m_enemies.back().SetupEnemy1(); // setup the last added enemy
+		m_enemies.back().pos = { 850.f + (i * 300.f), 780.f };
+		m_enemies.back().sprite->setPosition(m_enemies.back().pos);
+	}
+
 	setupAudio();
 }
 
@@ -218,11 +223,25 @@ void Game::update(sf::Time t_deltaTime)
 
 				if (enemy.health <= 0)
 				{
-					std::cout << "Enemy defeated!" << std::endl;
+					std::cout << "Enemy defeated! Recycling..." << std::endl;
 
-					distance += 200.f ;
-					m_enemies.back().pos = { 850.f + distance, 780.f };
-					m_enemies.back().sprite->setPosition(m_enemies.back().pos);
+					// Find the OTHER enemy to spawn next to
+					float furthestX = 0.f;
+					for (const auto& otherEnemy : m_enemies)
+					{
+						if (otherEnemy.pos.x > furthestX && otherEnemy.health > 0)
+							furthestX = otherEnemy.pos.x;
+					}
+
+					// Reset the defeated enemy
+					enemy.health = Enemy1::MAX_HEALTH;  // Reset health
+					enemy.pos = { furthestX + 300.f, 780.f };  // Spawn 300 units ahead
+					enemy.sprite->setPosition(enemy.pos);
+					enemy.UpdateHealthBar();  // Refresh health bar
+					enemy.state = Enemy1::EnemyState::Idle;  // Reset state
+					enemy.attackCooldown = 0.f;  // Reset cooldown
+					enemy.hasDealtDamage = false;
+					enemy.canDamagePlayer = false;
 				}
 			}
 		}
@@ -238,10 +257,12 @@ void Game::update(sf::Time t_deltaTime)
 				std::cout << "Attack blocked!" << std::endl;
 				float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
 
-				m_Player.velocity.x = knockbackDirection * 1.f;
-
+				m_Player.velocity.x = knockbackDirection * 500.f;
 				if(m_Player.isOnGround)
-					m_Player.velocity.y = -30.f;
+					m_Player.velocity.y = -10.f;
+
+				m_Player.isKnockedBack = true;
+				m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
 
 				enemy.hasDealtDamage = true;
 				enemy.canDamagePlayer = false;
@@ -376,8 +397,4 @@ void Game::setupAudio()
 	m_bpmText.setString("Live BPM: 0.0");
 }
 
-void Game::initNPCs()
-{
-	
 
-}

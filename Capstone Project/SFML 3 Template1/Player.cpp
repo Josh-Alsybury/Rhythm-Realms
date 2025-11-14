@@ -172,6 +172,16 @@ void player::TakeDamage(int amount)
 
 void player::Update(float dt)
 {
+    // Update knockback timer
+    if (isKnockedBack)
+    {
+        knockbackTimer -= dt;
+        if (knockbackTimer <= 0.0f)
+        {
+            isKnockedBack = false;
+        }
+    }
+
     if (!isOnGround)
     {
         if (state == PlayerState::Jump_start)
@@ -225,12 +235,15 @@ void player::Update(float dt)
         isOnGround = false;
     }
 
-    if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) &&
-        !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) &&
-        !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) &&
-        !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+    if (!isKnockedBack)  // Knockback condition
     {
-        velocity.x = 0.f;  // Instant stop
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+        {
+            velocity.x = 0.f;  // Instant stop
+        }
     }
 
     float hitboxOffsetX = facingRight ? 60.f : -60.f;

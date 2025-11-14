@@ -19,7 +19,7 @@ public:
     bool facingRight = false;
 
     float speed = 150.f;
-    float maxSpeed = 400.f;
+    float maxSpeed = 300.f;
     float friction = 500.f;
     float gravity = 50.f;
     float groundLevel =750.f;
