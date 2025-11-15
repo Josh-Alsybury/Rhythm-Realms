@@ -61,7 +61,7 @@ void Game::run()
 	sf::Clock clock;
 	sf::Time timeSinceLastUpdate = sf::Time::Zero;
 	const float fps{ 60.0f };
-	sf::Time timePerFrame = sf::seconds(1.0f / fps); // 60 fps
+	sf::Time timePerFrame = sf::seconds(1.0f / fps);
 	while (m_window.isOpen())
 	{
 		processEvents(); 
@@ -69,8 +69,8 @@ void Game::run()
 		while (timeSinceLastUpdate > timePerFrame)
 		{
 			timeSinceLastUpdate -= timePerFrame;
-			processEvents(); // at least 60 fps
-			update(timePerFrame); //60 fps
+			processEvents(); 
+			update(timePerFrame); /
 		}
 		render(); 
 	}
@@ -93,7 +93,33 @@ void Game::processEvents()
 		{
 			processKeys(newEvent);
 		}
+
+		// Handle mouse clicks
+		if (newEvent->is<sf::Event::MouseButtonPressed>())
+		{
+			if (m_showSkillTree)
+			{
+				const auto* mousePress = newEvent->getIf<sf::Event::MouseButtonPressed>();
+				if (mousePress->button == sf::Mouse::Button::Left)
+				{
+					sf::Vector2f mousePos = m_window.mapPixelToCoords(mousePress->position);
+					m_skillTree.HandleClick(mousePos);
+				}
+			}
+		}
+
+		// Handle mouse movement for hover tooltips
+		if (newEvent->is<sf::Event::MouseMoved>())
+		{
+			if (m_showSkillTree)
+			{
+				const auto* mouseMove = newEvent->getIf<sf::Event::MouseMoved>();
+				sf::Vector2f mousePos = m_window.mapPixelToCoords(mouseMove->position);
+				m_skillTree.UpdateHover(mousePos);
+			}
+		}
 	}
+	
 }
 
 
@@ -111,6 +137,10 @@ void Game::processKeys(const std::optional<sf::Event> t_event)
 	if (sf::Keyboard::Key::N == newKeypress->code)
 	{
 		switchSong();
+	}
+	if (sf::Keyboard::Key::T == newKeypress->code)
+	{
+		m_showSkillTree = !m_showSkillTree; 
 	}
 }
 
@@ -133,6 +163,10 @@ void Game::checkKeyboardState()
 /// Update the game world
 /// </summary>
 /// <param name="t_deltaTime">time interval per frame</param>
+/// <summary>
+/// Update the game world
+/// </summary>
+/// <param name="t_deltaTime">time interval per frame</param>
 void Game::update(sf::Time t_deltaTime)
 {
 	checkKeyboardState();
@@ -144,46 +178,45 @@ void Game::update(sf::Time t_deltaTime)
 		if (m_currentBPM < 90.0 && m_currentTheme != "Medieval")
 		{
 			std::cout << "Transitioning to Medieval theme (BPM: " << m_currentBPM << ")" << std::endl;
-			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Background");  // Use transitionTo!
+			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Background");
 			m_currentTheme = "Medieval";
 		}
 		else if (m_currentBPM >= 90.0 && m_currentBPM <= 150.0 && m_currentTheme != "Forest")
 		{
 			std::cout << "Transitioning to Forest theme (BPM: " << m_currentBPM << ")" << std::endl;
-			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");  // Use transitionTo!
+			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
 			m_currentTheme = "Forest";
 		}
 	}
 	m_bpmText.setString("Live BPM: " + std::to_string(static_cast<int>(m_currentBPM)));
 
-	sf::Vector2f direction{ 0.0f, 0.0f };
-
-
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+	if (!m_showSkillTree)
 	{
-		m_Player.moveLeft();
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+		{
+			m_Player.moveLeft();
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+		{
+			m_Player.moveRight();
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+		{
+			m_Player.Jump();
+		}
+		if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right))
+		{
+			m_Player.Attack();
+		}
+		if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+		{
+			m_Player.Defend();
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
+		{
+			m_Player.Heal();
+		}
 	}
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
-	{
-		m_Player.moveRight();
-	}
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
-	{
-		m_Player.Jump();
-	}
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right))
-	{
-		m_Player.Attack();
-	}
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
-	{
-		m_Player.Defend();
-	}
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
-	{
-		m_Player.Heal();
-	}
-
 
 	float leftMargin = m_screenMargin;
 	float rightMargin = m_window.getSize().x - m_screenMargin;
@@ -204,80 +237,82 @@ void Game::update(sf::Time t_deltaTime)
 		m_window.close();
 	}
 
-	for (auto& enemy : m_enemies)
+	// QOL: Pause enemies when skill tree is open
+	if (!m_showSkillTree)
 	{
-
-		enemy.Update(dt, m_Player.pos);
-
-		// Check player attacking enemy
-		if (m_Player.canDamageEnemy)
+		for (auto& enemy : m_enemies)
 		{
-			float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
-			float dy = m_Player.attackHitbox.getPosition().y - enemy.pos.y;
-			float distance = std::sqrt(dx * dx + dy * dy);
+			enemy.Update(dt, m_Player.pos);
 
-			if (distance < m_Player.attackHitboxRadius + 30.f)  // 30f = rough enemy body size
+			// Check player attacking enemy
+			if (m_Player.canDamageEnemy)
 			{
-				enemy.TakeDamage(1);
-				m_Player.canDamageEnemy = false;  // Prevent multi-hit in same attack
+				float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
+				float dy = m_Player.attackHitbox.getPosition().y - enemy.pos.y;
+				float distance = std::sqrt(dx * dx + dy * dy);
 
-				if (enemy.health <= 0)
+				if (distance < m_Player.attackHitboxRadius + 30.f)
 				{
-					std::cout << "Enemy defeated! Recycling..." << std::endl;
+					enemy.TakeDamage(1);
+					m_Player.canDamageEnemy = false;
 
-					// Find the OTHER enemy to spawn next to
-					float furthestX = 0.f;
-					for (const auto& otherEnemy : m_enemies)
+					if (enemy.health <= 0)
 					{
-						if (otherEnemy.pos.x > furthestX && otherEnemy.health > 0)
-							furthestX = otherEnemy.pos.x;
-					}
+						std::cout << "Enemy defeated! Recycling..." << std::endl;
+						m_skillTree.AddSkillPoint();
 
-					// Reset the defeated enemy
-					enemy.health = Enemy1::MAX_HEALTH;  // Reset health
-					enemy.pos = { furthestX + 300.f, 780.f };  // Spawn 300 units ahead
-					enemy.sprite->setPosition(enemy.pos);
-					enemy.UpdateHealthBar();  // Refresh health bar
-					enemy.state = Enemy1::EnemyState::Idle;  // Reset state
-					enemy.attackCooldown = 0.f;  // Reset cooldown
-					enemy.hasDealtDamage = false;
+						float furthestX = 0.f;
+						for (const auto& otherEnemy : m_enemies)
+						{
+							if (otherEnemy.pos.x > furthestX && otherEnemy.health > 0)
+								furthestX = otherEnemy.pos.x;
+						}
+
+						// Reset the defeated enemy
+						enemy.health = Enemy1::MAX_HEALTH;
+						enemy.pos = { furthestX + 300.f, 780.f };
+						enemy.sprite->setPosition(enemy.pos);
+						enemy.UpdateHealthBar();
+						enemy.state = Enemy1::EnemyState::Idle;
+						enemy.attackCooldown = 0.f;
+						enemy.hasDealtDamage = false;
+						enemy.canDamagePlayer = false;
+					}
+				}
+			}
+
+			// Check enemy attacking player
+			if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
+			{
+				float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
+				float dy = enemy.attackHitbox.getPosition().y - m_Player.pos.y;
+				float distance = std::sqrt(dx * dx + dy * dy);
+
+				if (m_Player.canBlockEnemy)
+				{
+					std::cout << "Attack blocked!" << std::endl;
+					float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
+
+					m_Player.velocity.x = knockbackDirection * 500.f;
+					if (m_Player.isOnGround)
+						m_Player.velocity.y = -10.f;
+
+					m_Player.isKnockedBack = true;
+					m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
+
+					enemy.hasDealtDamage = true;
 					enemy.canDamagePlayer = false;
+				}
+				else
+				{
+					m_Player.TakeDamage(1);
+					enemy.hasDealtDamage = true;
+					enemy.canDamagePlayer = false;
+					std::cout << "Player hit! Health: " << m_Player.health << std::endl;
 				}
 			}
 		}
-		// Check enemy attacking player
-		if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
-		{
-			float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
-			float dy = enemy.attackHitbox.getPosition().y - m_Player.pos.y;
-			float distance = std::sqrt(dx * dx + dy * dy);
-
-			if (m_Player.canBlockEnemy)
-			{
-				std::cout << "Attack blocked!" << std::endl;
-				float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
-
-				m_Player.velocity.x = knockbackDirection * 500.f;
-				if(m_Player.isOnGround)
-					m_Player.velocity.y = -10.f;
-
-				m_Player.isKnockedBack = true;
-				m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
-
-				enemy.hasDealtDamage = true;
-				enemy.canDamagePlayer = false;
-			}
-			else
-			{
-				// Block failed - take damage
-				m_Player.TakeDamage(1);
-				enemy.hasDealtDamage = true;
-				enemy.canDamagePlayer = false;
-				std::cout << "Player hit! Health: " << m_Player.health << std::endl;
-			}
-		}
 	}
-
 }
 
 void Game::switchSong()
@@ -302,6 +337,9 @@ void Game::switchSong()
 /// <summary>
 /// draw the frame and then switch buffers
 /// </summary>
+/// <summary>
+/// draw the frame and then switch buffers
+/// </summary>
 void Game::render()
 {
 	m_window.clear(sf::Color::Blue);
@@ -310,23 +348,11 @@ void Game::render()
 	m_Player.sprite->setPosition(renderPos);
 	m_dynamicBackground.render(m_window);
 
-	for (int i = 0; i < m_Player.HealsCount; i++)
-	{
-		m_window.draw(m_Player.HealSphere[i]);
-	}
-
-	for (auto& bar : m_Player.HealBar)
-	{
-		m_window.draw(bar);
-	}
-
+	// Draw game world first
 	for (auto& enemy : m_enemies)
 	{
-		// Apply camera offset to enemy rendering
 		sf::Vector2f enemyRenderPos = enemy.pos - m_cameraOffset;
 		enemy.sprite->setPosition(enemyRenderPos);
-
-		// Also offset the debug circles
 		enemy.detectionRadius.setPosition(enemyRenderPos);
 		enemy.attackRadius.setPosition(enemyRenderPos);
 
@@ -344,6 +370,28 @@ void Game::render()
 
 	m_window.draw(*m_Player.sprite);
 	m_window.draw(m_bpmText);
+
+	// Draw UI elements (always on top)
+	for (int i = 0; i < m_Player.HealsCount; i++)
+	{
+		m_window.draw(m_Player.HealSphere[i]);
+	}
+
+	for (auto& bar : m_Player.HealBar)
+	{
+		m_window.draw(bar);
+	}
+
+	if (m_showSkillTree)
+	{
+		// QOL: Add semi-transparent dark overlay
+		sf::RectangleShape overlay(sf::Vector2f(m_window.getSize()));
+		overlay.setFillColor(sf::Color(0, 0, 0, 180));  // Dark transparent background
+		m_window.draw(overlay);
+
+		m_skillTree.Draw(m_window);
+	}
+
 	m_window.display();
 }
 

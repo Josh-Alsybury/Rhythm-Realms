@@ -39,6 +39,7 @@
     <ClInclude Include="Headers\Game.h" />
     <ClInclude Include="Headers\Npc.h" />
     <ClInclude Include="Headers\Player.h" />
+    <ClInclude Include="SkillTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Background.cpp" />
@@ -50,6 +51,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Npc.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="SkillTree.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

@@ -22,7 +22,7 @@
 #include "DynamicBackground.h"
 #include "BpmStream.h"
 #include "Enemy1.h"
-
+#include "SkillTree.h"
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
 
@@ -53,18 +53,22 @@ private:
 	void setupTexts();
 	void setupSprites();
 	void setupAudio();
-	void initNPCs();
+
 
 	sf::RenderWindow m_window; // main SFML window
 	sf::Font m_jerseyFont;// font used by message
 	sf::Text m_formationHintText{ m_jerseyFont };
+
+
 
 	bool m_DELETEexitGame; // control exiting game
 	player m_Player;
 	//std::vector<Npc> m_npcs;
 	sf::Text m_bpmText{ m_jerseyFont };
 	BpmStream m_bpmStream;
+	SkillTree m_skillTree;
 	double m_currentBPM = 0.0;
+	bool m_showSkillTree = false;
 	std::vector<std::string> m_songPaths;
 	size_t m_currentSongIndex;
 
