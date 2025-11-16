@@ -18,6 +18,7 @@
 /// </summary>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include "Chunk.h"
 #include "Player.h"
 #include "DynamicBackground.h"
 #include "BpmStream.h"
@@ -59,7 +60,8 @@ private:
 	sf::Font m_jerseyFont;// font used by message
 	sf::Text m_formationHintText{ m_jerseyFont };
 
-
+	Chunk m_chunk;
+	sf::Texture m_tilesetTexture;
 
 	bool m_DELETEexitGame; // control exiting game
 	player m_Player;

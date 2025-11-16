@@ -38,6 +38,16 @@ Game::Game() :
 	}
 
 	setupAudio();
+
+	if (!m_tilesetTexture.loadFromFile("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Tileset/Tileset.png"))
+	{
+		std::cout << "Failed to load tileset!" << std::endl;
+	}
+
+	if (!m_chunk.load("ASSETS/CHUNKS/Chunk1(Forest).tmj", m_tilesetTexture, 32))
+	{
+		std::cout << "Failed to load chunk!" << std::endl;
+	}
 }
 
 /// <summary>
@@ -70,7 +80,7 @@ void Game::run()
 		{
 			timeSinceLastUpdate -= timePerFrame;
 			processEvents(); 
-			update(timePerFrame); /
+			update(timePerFrame); 
 		}
 		render(); 
 	}
@@ -347,6 +357,7 @@ void Game::render()
 	sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
 	m_Player.sprite->setPosition(renderPos);
 	m_dynamicBackground.render(m_window);
+	m_chunk.draw(m_window, m_cameraOffset);
 
 	// Draw game world first
 	for (auto& enemy : m_enemies)

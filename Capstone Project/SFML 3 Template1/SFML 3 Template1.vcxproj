@@ -31,6 +31,7 @@
     <Media Include="ASSETS\AUDIO\beep.wav" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Chunk.h" />
     <ClInclude Include="Enemy1.h" />
     <ClInclude Include="Headers\Background.h" />
     <ClInclude Include="Headers\BPM.h" />
@@ -45,6 +46,7 @@
     <ClCompile Include="Background.cpp" />
     <ClCompile Include="BPM.cpp" />
     <ClCompile Include="BpmStream.cpp" />
+    <ClCompile Include="Chunk.cpp" />
     <ClCompile Include="DynamicBackground.cpp" />
     <ClCompile Include="Enemy1.cpp" />
     <ClCompile Include="Game.cpp" />
