@@ -3,10 +3,13 @@
 
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <unordered_set>
 #include <string>
 
 class Chunk {
 private:
+    std::unordered_set<int> loadSolidTilesFromTileset(const std::string& tilesetPath);
+
     sf::VertexArray m_vertices;
     std::vector<int> m_tiles;
     std::vector<int> m_collisionTiles;

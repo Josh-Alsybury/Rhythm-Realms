@@ -4,6 +4,38 @@
 #include <iostream>
 #include "json.hpp"
 
+std::unordered_set<int> Chunk::loadSolidTilesFromTileset(const std::string& tilesetPath)
+{
+    std::unordered_set<int> solidIds;
+
+    std::ifstream f(tilesetPath);
+    if (!f.is_open()) {
+        std::cerr << "Failed to open tileset: " << tilesetPath << std::endl;
+        // Return empty set - will fall back to hardcoded values
+        return solidIds;
+    }
+
+    nlohmann::json tilesetData;
+    f >> tilesetData;
+
+    if (tilesetData.contains("tiles")) {
+        for (auto& tile : tilesetData["tiles"]) {
+            int tileId = tile["id"].get<int>() + 1;  // Tiled uses 0-based, we use 1-based
+
+            if (tile.contains("properties")) {
+                for (auto& prop : tile["properties"]) {
+                    if (prop["name"] == "solid" && prop["value"] == true) {
+                        solidIds.insert(tileId);
+                        std::cout << "Tile ID " << tileId << " marked as solid" << std::endl;
+                    }
+                }
+            }
+        }
+    }
+
+    return solidIds;
+}
+
 // Load chunk data from Tiled JSON file and initialize collision/rendering
 bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSize) {
     std::ifstream f(file);
@@ -29,9 +61,15 @@ bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSi
     }
 
     // Define which tile IDs are solid for collision
-    std::unordered_set<int> solidTileIds = { 3, 29 };
+    std::unordered_set<int> solidTileIds = loadSolidTilesFromTileset("ASSETS/IMAGES/Tiles/Forest.tsj");
 
-    // Build collision map based on solid tile IDs
+    // Fallback to hardcoded if tileset loading failed
+    if (solidTileIds.empty()) {
+        std::cout << "Warning: No solid tiles loaded from tileset, using defaults" << std::endl;
+        solidTileIds = { 3, 29 };
+    }  // CLOSE THE IF STATEMENT HERE
+
+    // Build collision map 
     m_collisionTiles.resize(m_width * m_height, 0);
     for (int i = 0; i < m_tiles.size(); ++i) {
         if (solidTileIds.count(m_tiles[i]) > 0) {

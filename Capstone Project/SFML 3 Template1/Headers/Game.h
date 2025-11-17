@@ -63,11 +63,13 @@ private:
 	void updateChunks();  //Manages chunk loading/unloading
 	void loadChunkAt(int index, float xPosition);  // Loads chunk at position
 
+	std::vector<std::string> m_chunkPaths;
 	std::vector<Chunk> m_chunks;  // from single Chunk to vector
 	const int VISIBLE_CHUNKS = 3;  // NNumber of chunks to keep loaded
 	float m_chunkWidth = 640.0f;   // Width of each chunk (20 tiles * 32px)
 	int m_nextChunkIndex = 0;
 	sf::Texture m_tilesetTexture;
+	
 
 	bool m_DELETEexitGame; // control exiting game
 	player m_Player;

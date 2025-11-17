@@ -219,21 +219,19 @@ void player::Update(float dt)
     if (velocity.x > maxSpeed) velocity.x = maxSpeed;
     if (velocity.x < -maxSpeed) velocity.x = -maxSpeed;
 
-    velocity.y += gravity * dt;
+    if (!isOnGround)
+    {
+        velocity.y += gravity * dt;
+    }
 
-    pos += velocity * dt;
+    pos.x += velocity.x * dt;
+    if (!isOnGround)
+    {
+        pos.y += velocity.y * dt;
+    }
+
     sprite->setPosition(pos);
 
-    if (pos.y >= Groundlevel)
-    {
-        pos.y = Groundlevel;
-        velocity.y = 0;
-        isOnGround = true;
-    }
-    else
-    {
-        isOnGround = false;
-    }
 
     if (!isKnockedBack)  // Knockback condition
     {

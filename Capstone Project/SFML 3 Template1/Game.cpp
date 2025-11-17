@@ -19,6 +19,12 @@ Game::Game() :
 {
 	m_dynamicBackground.loadtheme("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
 
+	m_chunkPaths = {
+	"ASSETS/CHUNKS/Chunk1(Forest).tmj",
+	"ASSETS/CHUNKS/Chunk2(Forest).tmj"
+	};
+
+
 	m_Player.pos.x = m_window.getSize().x / 2.f;
 	setupSprites(); // load texture
 	setupTexts();   // load font
@@ -255,29 +261,37 @@ void Game::update(sf::Time t_deltaTime)
 
 	m_dynamicBackground.update(m_cameraOffset);
 	float dt = t_deltaTime.asSeconds();
-	m_Player.Update(dt);
-	updateChunks();
 
 	// PLAYER COLLISION
 	m_Player.isOnGround = false;
 	float playerFeetY = m_Player.pos.y + 50.0f;
-	float checkDistance = 5.0f;
 
-	if (!m_Player.isKnockedBack)
+	// Check the tile directly at player's feet, not 5 pixels below
+	for (auto& chunk : m_chunks)
 	{
-		for (auto& chunk : m_chunks)
+		if (chunk.isSolidTileWorld(m_Player.pos.x, playerFeetY))
 		{
-			if (chunk.isSolidTileWorld(m_Player.pos.x, playerFeetY + checkDistance))
+			if (m_Player.velocity.y >= 0)
 			{
 				m_Player.isOnGround = true;
 				m_Player.velocity.y = 0;
+
+				// Snap player to exact tile surface
 				float chunkRelativeY = playerFeetY - chunk.getPosition().y;
 				int tileY = static_cast<int>(chunkRelativeY / 32.0f);
+
+				// Position player exactly on top of the tile
 				m_Player.pos.y = chunk.getPosition().y + (tileY * 32.0f) - 50.0f;
 				break;
 			}
 		}
 	}
+	//
+	// issues here were checks for below feet casued pixel skipping so it checks 5 pixels below the surface 
+	//	instead of the tile directly below the feet
+	//
+	m_Player.Update(dt);
+	updateChunks();
 
 	if (m_DELETEexitGame)
 	{
@@ -548,8 +562,12 @@ void Game::updateChunks()
 
 void Game::loadChunkAt(int index, float xPosition)
 {
+	// Randomly select from available chunks
+	int randomIndex = rand() % m_chunkPaths.size();
+	std::string chunkFile = m_chunkPaths[randomIndex];
+
 	// Chunk::load() now handles clearing and rebuilding internally
-	if (!m_chunks[index].load("ASSETS/CHUNKS/Chunk1(Forest).tmj", m_tilesetTexture, 32))
+	if (!m_chunks[index].load(chunkFile, m_tilesetTexture, 32))
 	{
 		std::cout << "Failed to load chunk at index " << index << std::endl;
 	}
