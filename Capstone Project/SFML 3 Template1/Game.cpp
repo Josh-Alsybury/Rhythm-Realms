@@ -27,13 +27,14 @@ Game::Game() :
 	m_Player.Health();
 
 	m_enemies.reserve(2);  // Pre-allocate for exactly 2
+	m_chunks.reserve(VISIBLE_CHUNKS);  // ADD THIS
 
 	// Initialize both enemies
 	for (int i = 0; i < 2; ++i)
 	{
 		m_enemies.emplace_back(); // adds a new Enemy1 to the vector
 		m_enemies.back().SetupEnemy1(); // setup the last added enemy
-		m_enemies.back().pos = { 850.f + (i * 300.f), 780.f };
+		m_enemies.back().pos = { 850.f + (i * 300.f), 760.f };
 		m_enemies.back().sprite->setPosition(m_enemies.back().pos);
 	}
 
@@ -44,10 +45,16 @@ Game::Game() :
 		std::cout << "Failed to load tileset!" << std::endl;
 	}
 
-	if (!m_chunk.load("ASSETS/CHUNKS/Chunk1(Forest).tmj", m_tilesetTexture, 32))
+	// Initialize 3 chunks side-by-side
+	m_chunks.resize(VISIBLE_CHUNKS);
+	for (int i = 0; i < VISIBLE_CHUNKS; ++i)
 	{
-		std::cout << "Failed to load chunk!" << std::endl;
+		loadChunkAt(i, i * m_chunkWidth);
 	}
+	m_nextChunkIndex = VISIBLE_CHUNKS;
+
+	std::cout << "Loaded " << VISIBLE_CHUNKS << " chunks" << std::endl;
+
 }
 
 /// <summary>
@@ -181,6 +188,15 @@ void Game::update(sf::Time t_deltaTime)
 {
 	checkKeyboardState();
 
+	static int frameCount = 0;
+	if (++frameCount % 300 == 0) {
+		float fps = 1.0f / t_deltaTime.asSeconds();
+		std::cout << "FPS: " << static_cast<int>(fps)
+			<< " | Player X: " << static_cast<int>(m_Player.pos.x)
+			<< " | Chunks: " << m_chunks.size()
+			<< " | Enemies: " << m_enemies.size() << std::endl;
+	}
+
 	m_currentBPM = m_bpmStream.getCurrentBPM();
 
 	if (m_currentBPM > 0.0)
@@ -230,7 +246,6 @@ void Game::update(sf::Time t_deltaTime)
 
 	float leftMargin = m_screenMargin;
 	float rightMargin = m_window.getSize().x - m_screenMargin;
-
 	float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
 
 	if (playerScreenX > rightMargin)
@@ -241,20 +256,45 @@ void Game::update(sf::Time t_deltaTime)
 	m_dynamicBackground.update(m_cameraOffset);
 	float dt = t_deltaTime.asSeconds();
 	m_Player.Update(dt);
+	updateChunks();
+
+	// PLAYER COLLISION
+	m_Player.isOnGround = false;
+	float playerFeetY = m_Player.pos.y + 50.0f;
+	float checkDistance = 5.0f;
+
+	if (!m_Player.isKnockedBack)
+	{
+		for (auto& chunk : m_chunks)
+		{
+			if (chunk.isSolidTileWorld(m_Player.pos.x, playerFeetY + checkDistance))
+			{
+				m_Player.isOnGround = true;
+				m_Player.velocity.y = 0;
+				float chunkRelativeY = playerFeetY - chunk.getPosition().y;
+				int tileY = static_cast<int>(chunkRelativeY / 32.0f);
+				m_Player.pos.y = chunk.getPosition().y + (tileY * 32.0f) - 50.0f;
+				break;
+			}
+		}
+	}
 
 	if (m_DELETEexitGame)
 	{
 		m_window.close();
 	}
 
-	// QOL: Pause enemies when skill tree is open
 	if (!m_showSkillTree)
 	{
 		for (auto& enemy : m_enemies)
 		{
+			float dx = enemy.pos.x - m_Player.pos.x;
+			if (std::abs(dx) > 2000.f) continue;
+
+			//. Update enemy AI 
 			enemy.Update(dt, m_Player.pos);
 
-			// Check player attacking enemy
+			//  Check player attacking enemy
 			if (m_Player.canDamageEnemy)
 			{
 				float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
@@ -271,16 +311,17 @@ void Game::update(sf::Time t_deltaTime)
 						std::cout << "Enemy defeated! Recycling..." << std::endl;
 						m_skillTree.AddSkillPoint();
 
-						float furthestX = 0.f;
-						for (const auto& otherEnemy : m_enemies)
-						{
-							if (otherEnemy.pos.x > furthestX && otherEnemy.health > 0)
-								furthestX = otherEnemy.pos.x;
+						// Find actual rightmost chunk dynamically
+						float rightmostChunkX = -999999.0f;
+						for (const auto& chunk : m_chunks) {
+							float chunkRight = chunk.getPosition().x + chunk.getWidth();
+							if (chunkRight > rightmostChunkX)
+								rightmostChunkX = chunkRight; // way was causing issues due to recycling of chunks
 						}
+						float randomOffset = 800.f + (rand() % 400);  // 800-1199 range
 
-						// Reset the defeated enemy
 						enemy.health = Enemy1::MAX_HEALTH;
-						enemy.pos = { furthestX + 300.f, 780.f };
+						enemy.pos = { rightmostChunkX + randomOffset, 746.f };
 						enemy.sprite->setPosition(enemy.pos);
 						enemy.UpdateHealthBar();
 						enemy.state = Enemy1::EnemyState::Idle;
@@ -291,7 +332,7 @@ void Game::update(sf::Time t_deltaTime)
 				}
 			}
 
-			// Check enemy attacking player
+			//  Check enemy attacking player
 			if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
 			{
 				float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
@@ -303,9 +344,9 @@ void Game::update(sf::Time t_deltaTime)
 					std::cout << "Attack blocked!" << std::endl;
 					float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
 
-					m_Player.velocity.x = knockbackDirection * 500.f;
+					m_Player.velocity.x = knockbackDirection * 200.f;
 					if (m_Player.isOnGround)
-						m_Player.velocity.y = -10.f;
+						m_Player.velocity.y = -10.f;  // Increased for visible effect
 
 					m_Player.isKnockedBack = true;
 					m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
@@ -324,6 +365,7 @@ void Game::update(sf::Time t_deltaTime)
 		}
 	}
 }
+
 
 void Game::switchSong()
 {
@@ -357,7 +399,11 @@ void Game::render()
 	sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
 	m_Player.sprite->setPosition(renderPos);
 	m_dynamicBackground.render(m_window);
-	m_chunk.draw(m_window, m_cameraOffset);
+
+	for (auto& chunk : m_chunks)
+	{
+		chunk.draw(m_window, m_cameraOffset);
+	}
 
 	// Draw game world first
 	for (auto& enemy : m_enemies)
@@ -373,9 +419,10 @@ void Game::render()
 
 		for (auto& bar : enemy.healthBar)
 		{
-			sf::RectangleShape offsetBar = bar;
-			offsetBar.setPosition(bar.getPosition() - m_cameraOffset);
-			m_window.draw(offsetBar);
+			sf::Vector2f originalPos = bar.getPosition();
+			bar.setPosition(originalPos - m_cameraOffset);
+			m_window.draw(bar);
+			bar.setPosition(originalPos);  // Restore position
 		}
 	}
 
@@ -457,3 +504,55 @@ void Game::setupAudio()
 }
 
 
+void Game::updateChunks()
+{
+	// Find rightmost chunk
+	float rightmostX = -999999.0f;
+	int rightmostIndex = 0;
+
+	for (int i = 0; i < m_chunks.size(); ++i)
+	{
+		float chunkRight = m_chunks[i].getPosition().x + m_chunks[i].getWidth();
+		if (chunkRight > rightmostX)
+		{
+			rightmostX = chunkRight;
+			rightmostIndex = i;
+		}
+	}
+
+	// If player is getting close to the right edge recyle leftmost chunk
+	float rightEdge = rightmostX;
+	if (m_Player.pos.x > rightEdge + 800 - (m_chunkWidth * 2))
+	{
+		// Find leftmost chunk
+		float leftmostX = 999999.0f;
+		int leftmostIndex = 0;
+
+		for (int i = 0; i < m_chunks.size(); ++i)
+		{
+			if (m_chunks[i].getPosition().x < leftmostX)
+			{
+				leftmostX = m_chunks[i].getPosition().x;
+				leftmostIndex = i;
+			}
+		}
+
+		// Only recycle if leftmost is  behind playe
+		if (m_Player.pos.x > leftmostX + m_chunkWidth)
+		{
+			float newX = rightmostX;
+			loadChunkAt(leftmostIndex, newX);
+		}
+	}
+}
+
+void Game::loadChunkAt(int index, float xPosition)
+{
+	// Chunk::load() now handles clearing and rebuilding internally
+	if (!m_chunks[index].load("ASSETS/CHUNKS/Chunk1(Forest).tmj", m_tilesetTexture, 32))
+	{
+		std::cout << "Failed to load chunk at index " << index << std::endl;
+	}
+	m_chunks[index].setPosition(sf::Vector2f(xPosition, 190.0f));
+	std::cout << "Loaded chunk " << index << " at x: " << xPosition << std::endl;
+}

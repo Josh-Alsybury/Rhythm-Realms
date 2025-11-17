@@ -18,8 +18,8 @@ public:
     sf::Vector2f velocity;
     bool facingRight = false;
 
-    float speed = 150.f;
-    float maxSpeed = 300.f;
+    float speed = 70.f;
+    float maxSpeed = 150.f;
     float friction = 500.f;
     float gravity = 50.f;
     float groundLevel =750.f;
@@ -37,6 +37,8 @@ public:
     Animation attackAnim;
     Animation defendAnim;
     Animation* currentAnim = nullptr;
+
+    bool isOnGround = false;
 
     // --- Animation Timing ---
     int m_frameNow{ 0 };

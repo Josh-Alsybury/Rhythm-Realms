@@ -1,0 +1,24 @@
+{ "columns":13,
+ "image":"..\/IMAGES\/Autumn Forest 2D Pixel Art\/Tileset\/Tileset.png",
+ "imageheight":160,
+ "imagewidth":416,
+ "margin":0,
+ "name":"Forest",
+ "spacing":0,
+ "tilecount":65,
+ "tiledversion":"1.11.2",
+ "tileheight":32,
+ "tiles":[
+        {
+         "id":2,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }],
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}

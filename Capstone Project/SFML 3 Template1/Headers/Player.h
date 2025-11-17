@@ -140,7 +140,7 @@ public:
         sprite = std::make_unique<sf::Sprite>(idleTexture);
         sprite->setScale(sf::Vector2f(1.8f, 1.8f));
 
-        pos = { 90.f, 750.f };
+        pos = { 90.f, 740.f };
         sprite->setPosition(pos);
         sprite->setTextureRect(sf::IntRect{ {0, 0}, {96, 96} });
         sprite->setOrigin(sf::Vector2f(48.f, 48.f)); 
