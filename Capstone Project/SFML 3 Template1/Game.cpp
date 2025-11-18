@@ -20,8 +20,9 @@ Game::Game() :
 	m_dynamicBackground.loadtheme("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
 
 	m_chunkPaths = {
-	"ASSETS/CHUNKS/Chunk1(Forest).tmj",
-	"ASSETS/CHUNKS/Chunk2(Forest).tmj"
+	"ASSETS/CHUNKS/Chunk3(Forest).tmj",
+	"ASSETS/CHUNKS/Chunk2(Forest).tmj",
+	"ASSETS/CHUNKS/Chunk1(Forest).tmj"
 	};
 
 
