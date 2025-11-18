@@ -51,17 +51,29 @@ Game::Game() :
 	{
 		std::cout << "Failed to load tileset!" << std::endl;
 	}
+	m_tilesetTexture.setSmooth(false);
 
-	// Initialize 3 chunks side-by-side
 	m_chunks.resize(VISIBLE_CHUNKS);
-	for (int i = 0; i < VISIBLE_CHUNKS; ++i)
+
+	// Load first chunk to get actual width
+	if (!loadChunkAt(0, 0))
+	{
+		std::cout << "Failed to load initial chunk!" << std::endl;
+		return;
+	}
+
+	// NOW we can safely get the chunk width
+	m_chunkWidth = m_chunks[0].getWidth();
+	std::cout << "Chunk width detected: " << m_chunkWidth << " pixels" << std::endl;
+
+	// Load remaining chunks using the correct width
+	for (int i = 1; i < VISIBLE_CHUNKS; ++i)
 	{
 		loadChunkAt(i, i * m_chunkWidth);
 	}
+
 	m_nextChunkIndex = VISIBLE_CHUNKS;
-
 	std::cout << "Loaded " << VISIBLE_CHUNKS << " chunks" << std::endl;
-
 }
 
 /// <summary>
@@ -259,6 +271,9 @@ void Game::update(sf::Time t_deltaTime)
 		m_cameraOffset.x += playerScreenX - rightMargin;
 	else if (playerScreenX < leftMargin)
 		m_cameraOffset.x -= leftMargin - playerScreenX;
+
+	m_cameraOffset.x = std::round(m_cameraOffset.x);
+	m_cameraOffset.y = std::round(m_cameraOffset.y);
 
 	m_dynamicBackground.update(m_cameraOffset);
 	float dt = t_deltaTime.asSeconds();
@@ -561,17 +576,19 @@ void Game::updateChunks()
 	}
 }
 
-void Game::loadChunkAt(int index, float xPosition)
+bool Game::loadChunkAt(int index, float xPosition)
 {
-	// Randomly select from available chunks
 	int randomIndex = rand() % m_chunkPaths.size();
 	std::string chunkFile = m_chunkPaths[randomIndex];
 
-	// Chunk::load() now handles clearing and rebuilding internally
 	if (!m_chunks[index].load(chunkFile, m_tilesetTexture, 32))
 	{
 		std::cout << "Failed to load chunk at index " << index << std::endl;
+		return false;
 	}
+
 	m_chunks[index].setPosition(sf::Vector2f(xPosition, 190.0f));
-	std::cout << "Loaded chunk " << index << " at x: " << xPosition << std::endl;
+	std::cout << "Loaded chunk " << index << " at x: " << xPosition
+		<< " (width: " << m_chunks[index].getWidth() << ")" << std::endl;
+	return true;
 }

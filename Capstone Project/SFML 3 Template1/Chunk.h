@@ -8,8 +8,6 @@
 
 class Chunk {
 private:
-    std::unordered_set<int> loadSolidTilesFromTileset(const std::string& tilesetPath);
-
     sf::VertexArray m_vertices;
     std::vector<int> m_tiles;
     std::vector<int> m_collisionTiles;
@@ -18,6 +16,8 @@ private:
     sf::Vector2f m_position;
 
 public:
+    static std::unordered_set<int> loadSolidTilesFromTilesetCached(const std::string& path);
+
     bool load(const std::string& file, const sf::Texture& tileset, int tileSize);
     void draw(sf::RenderTarget& target, sf::Vector2f cameraOffset);
     

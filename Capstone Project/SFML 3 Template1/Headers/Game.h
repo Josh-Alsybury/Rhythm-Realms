@@ -61,8 +61,7 @@ private:
 	sf::Text m_formationHintText{ m_jerseyFont };
 
 	void updateChunks();  //Manages chunk loading/unloading
-	void loadChunkAt(int index, float xPosition);  // Loads chunk at position
-
+	bool loadChunkAt(int index, float xPosition);  // Loads chunk at position
 	std::vector<std::string> m_chunkPaths;
 	std::vector<Chunk> m_chunks;  // from single Chunk to vector
 	const int VISIBLE_CHUNKS = 3;  // NNumber of chunks to keep loaded

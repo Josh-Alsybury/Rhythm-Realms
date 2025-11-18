@@ -4,15 +4,19 @@
 #include <iostream>
 #include "json.hpp"
 
-std::unordered_set<int> Chunk::loadSolidTilesFromTileset(const std::string& tilesetPath)
-{
-    std::unordered_set<int> solidIds;
+std::unordered_set<int> Chunk::loadSolidTilesFromTilesetCached(const std::string& path) {
+    static std::unordered_map<std::string, std::unordered_set<int>> s_cache;
 
-    std::ifstream f(tilesetPath);
+    auto it = s_cache.find(path);
+    if (it != s_cache.end())
+        return it->second;
+
+    std::unordered_set<int> result;
+
+    std::ifstream f(path);
     if (!f.is_open()) {
-        std::cerr << "Failed to open tileset: " << tilesetPath << std::endl;
-        // Return empty set - will fall back to hardcoded values
-        return solidIds;
+        std::cerr << "Failed to open tileset: " << path << std::endl;
+        return result;
     }
 
     nlohmann::json tilesetData;
@@ -20,24 +24,26 @@ std::unordered_set<int> Chunk::loadSolidTilesFromTileset(const std::string& tile
 
     if (tilesetData.contains("tiles")) {
         for (auto& tile : tilesetData["tiles"]) {
-            int tileId = tile["id"].get<int>() + 1;  // Tiled uses 0-based, we use 1-based
-
+            int tileId = tile["id"].get<int>() + 1;
             if (tile.contains("properties")) {
                 for (auto& prop : tile["properties"]) {
                     if (prop["name"] == "solid" && prop["value"] == true) {
-                        solidIds.insert(tileId);
-                        std::cout << "Tile ID " << tileId << " marked as solid" << std::endl;
+                        result.insert(tileId);
                     }
                 }
             }
         }
     }
 
-    return solidIds;
+    s_cache[path] = result;
+    return result;
 }
 
 // Load chunk data from Tiled JSON file and initialize collision/rendering
 bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSize) {
+
+    clearTiles();
+
     std::ifstream f(file);
     if (!f.is_open()) {
         std::cerr << "Failed to open chunk file: " << file << std::endl;
@@ -61,7 +67,7 @@ bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSi
     }
 
     // Define which tile IDs are solid for collision
-    std::unordered_set<int> solidTileIds = loadSolidTilesFromTileset("ASSETS/IMAGES/Tiles/Forest.tsj");
+    std::unordered_set<int> solidTileIds = Chunk::loadSolidTilesFromTilesetCached("ASSETS/Tiles/Forest.tsj");
 
     // Fallback to hardcoded if tileset loading failed
     if (solidTileIds.empty()) {
@@ -85,27 +91,43 @@ bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSi
 
 //Build vertex array for efficient GPU rendering (called once per chunk load)
 void Chunk::buildVertexArray() {
+    m_vertices.clear();
     m_vertices.setPrimitiveType(sf::PrimitiveType::Triangles);
-    m_vertices.resize(m_width * m_height * 6);  // 6 vertices per tile (2 triangles)
+
+    // First pass: count non-empty tiles
+    int nonEmptyTiles = 0;
+    for (int id : m_tiles) if (id != 0) ++nonEmptyTiles;
+    m_vertices.resize(nonEmptyTiles * 6);
+
+    // Allocate exact space needed (6 vertices per non-empty tile)
+    m_vertices.resize(nonEmptyTiles * 6);
 
     int cols = m_tileset->getSize().x / m_tileSize;
+    const float epsilon = 0.1f;
+
+    int vertexIndex = 0;  // Track current vertex position
 
     for (int y = 0; y < m_height; ++y) {
         for (int x = 0; x < m_width; ++x) {
             int id = m_tiles[y * m_width + x];
-            if (id == 0) continue;  // Skip empty tiles
+
+            // CRITICAL: Skip empty tiles completely
+            if (id == 0) continue;
+
             --id;  // Tiled IDs are 1-based
 
             // Calculate texture coordinates
             int tu = id % cols;
             int tv = id / cols;
 
-            // Get pointer to this tile's vertices (6 vertices = 2 triangles)
-            sf::Vertex* quad = &m_vertices[(x + y * m_width) * 6];
+            // Get pointer to this tile's vertices
+            sf::Vertex* quad = &m_vertices[vertexIndex];
+            vertexIndex += 6;  // Move to next tile's vertices
 
             // Calculate positions
             sf::Vector2f pos(x * m_tileSize, y * m_tileSize);
-            sf::Vector2f texPos(tu * m_tileSize, tv * m_tileSize);
+            sf::Vector2f texPos(tu * m_tileSize + epsilon, tv * m_tileSize + epsilon);
+            sf::Vector2f texSize(m_tileSize - 2 * epsilon, m_tileSize - 2 * epsilon);
 
             // Triangle 1: Top-left corner
             quad[0].position = pos;
@@ -119,11 +141,11 @@ void Chunk::buildVertexArray() {
 
             // Apply texture coordinates
             quad[0].texCoords = texPos;
-            quad[1].texCoords = texPos + sf::Vector2f(m_tileSize, 0);
-            quad[2].texCoords = texPos + sf::Vector2f(0, m_tileSize);
-            quad[3].texCoords = texPos + sf::Vector2f(m_tileSize, 0);
-            quad[4].texCoords = texPos + sf::Vector2f(m_tileSize, m_tileSize);
-            quad[5].texCoords = texPos + sf::Vector2f(0, m_tileSize);
+            quad[1].texCoords = texPos + sf::Vector2f(texSize.x, 0);
+            quad[2].texCoords = texPos + sf::Vector2f(0, texSize.y);
+            quad[3].texCoords = texPos + sf::Vector2f(texSize.x, 0);
+            quad[4].texCoords = texPos + texSize;
+            quad[5].texCoords = texPos + sf::Vector2f(0, texSize.y);
         }
     }
 }
@@ -131,9 +153,20 @@ void Chunk::buildVertexArray() {
 
 // Render chunk with camera offset (single draw call)
 void Chunk::draw(sf::RenderTarget& target, sf::Vector2f cameraOffset) {
+    
+    if (m_vertices.getVertexCount() == 0) {
+        return;  // Nothing to draw
+    }
+
     sf::RenderStates states;
     states.texture = m_tileset;
-    states.transform.translate(m_position - cameraOffset);
+
+    // Round to integer pixel positions
+    sf::Vector2f renderPos = m_position - cameraOffset; //This prevents subpixel rendering that causes texture bleeding.
+    renderPos.x = std::round(renderPos.x);
+    renderPos.y = std::round(renderPos.y);
+
+    states.transform.translate(renderPos);
     target.draw(m_vertices, states);
 }
 
@@ -143,10 +176,6 @@ void Chunk::clearTiles() {
     m_tiles.clear();
     m_collisionTiles.clear();
     m_vertices.clear();
-
-    // Shrink vectors to free memory
-    m_tiles.shrink_to_fit();
-    m_collisionTiles.shrink_to_fit();
 }
 
 // ===== COLLISION DETECTION =====
