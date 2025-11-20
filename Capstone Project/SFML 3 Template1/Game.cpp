@@ -264,7 +264,7 @@ void Game::update(sf::Time t_deltaTime)
 	}
 
 	float leftMargin = m_screenMargin;
-	float rightMargin = m_window.getSize().x - m_screenMargin;
+	float rightMargin = (m_window.getSize().x - 150)  - m_screenMargin;
 	float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
 
 	if (playerScreenX > rightMargin)
