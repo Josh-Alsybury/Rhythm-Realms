@@ -20,9 +20,10 @@ Game::Game() :
 	m_dynamicBackground.loadtheme("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
 
 	m_chunkPaths = {
-	"ASSETS/CHUNKS/Chunk3(Forest).tmj",
+	"ASSETS/CHUNKS/Chunk1(Forest).tmj",
 	"ASSETS/CHUNKS/Chunk2(Forest).tmj",
-	"ASSETS/CHUNKS/Chunk1(Forest).tmj"
+	"ASSETS/CHUNKS/Chunk3(Forest).tmj",
+	"ASSETS/CHUNKS/Chunk4(Forest).tmj"
 	};
 
 
@@ -282,7 +283,7 @@ void Game::update(sf::Time t_deltaTime)
 	m_Player.isOnGround = false;
 	float playerFeetY = m_Player.pos.y + 50.0f;
 
-	// Check the tile directly at player's feet, not 5 pixels below
+	// Check the tile directly at player's feet, not 5 pixels below ( was a big problem with player bouncing due to this )
 	for (auto& chunk : m_chunks)
 	{
 		if (chunk.isSolidTileWorld(m_Player.pos.x, playerFeetY))

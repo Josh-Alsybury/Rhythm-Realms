@@ -4,6 +4,11 @@
 #include <iostream>
 #include "json.hpp"
 
+// Load tile data from JSON
+bool isBackground(int id) {
+    return id == 1 || id == 2;   // adjust for your tileset
+}
+
 std::unordered_set<int> Chunk::loadSolidTilesFromTilesetCached(const std::string& path) {
     static std::unordered_map<std::string, std::unordered_set<int>> s_cache;
 
@@ -59,12 +64,27 @@ bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSi
     m_height = data["height"];
     m_tileSize = tileSize;
 
-    // Load tile data from JSON
-    auto tiles = data["layers"][0]["data"];
-    m_tiles.resize(m_width * m_height);
-    for (int i = 0; i < tiles.size(); ++i) {
-        m_tiles[i] = tiles[i];
+
+
+    m_tiles.assign(m_width * m_height, 0);
+
+    for (int L = data["layers"].size() - 1; L >= 0; --L) {
+        auto& layer = data["layers"][L];
+
+        auto& layerData = layer["data"];
+
+        for (int i = 0; i < layerData.size(); ++i) {
+            int id = layerData[i];
+
+            if (id == 0) continue;
+
+            // if bottom is empty OR bottom is background, overwrite
+            if (m_tiles[i] == 0 || isBackground(m_tiles[i])) {
+                m_tiles[i] = id;
+            }
+        }
     }
+
 
     // Define which tile IDs are solid for collision
     std::unordered_set<int> solidTileIds = Chunk::loadSolidTilesFromTilesetCached("ASSETS/Tiles/Forest.tsj");
@@ -201,3 +221,4 @@ bool Chunk::isSolidTileWorld(float worldX, float worldY) const {
 
     return isSolidTile(tileX, tileY);
 }
+
