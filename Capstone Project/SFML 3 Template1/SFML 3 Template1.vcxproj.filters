@@ -75,6 +75,12 @@
     <ClInclude Include="SpotifyClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="EnemySpawnManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EnemyTextures.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Background.cpp">
@@ -114,6 +120,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SpotifyClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EnemySpawnManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EnemyTextures.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

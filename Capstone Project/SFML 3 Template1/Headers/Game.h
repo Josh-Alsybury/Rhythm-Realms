@@ -22,10 +22,12 @@
 #include "Player.h"
 #include "DynamicBackground.h"
 #include "BpmStream.h"
+#include "EnemyTextures.h"
 #include "Enemy1.h"
 #include "SkillTree.h"
 #include "Menu.h"
 #include "SpotifyClient.h"
+#include "EnemySpawnManager.h"
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
 
@@ -79,8 +81,16 @@ private:
 	float m_chunkWidth = 640.0f;   // Width of each chunk (20 tiles * 32px)
 	int m_nextChunkIndex = 0;
 	sf::Texture m_tilesetTexture;
-	
 
+	// Enemy spawning
+	EnemySpawnManager m_enemySpawnManager;
+	float m_gameTimer;  // Tracks total game time
+
+	// Spawn configurations for different difficulties
+	EnemySpawnConfig m_easyConfig;
+	EnemySpawnConfig m_normalConfig;
+	EnemySpawnConfig m_hardConfig;
+	
 	bool m_DELETEexitGame; // control exiting game
 	player m_Player;
 	//std::vector<Npc> m_npcs;

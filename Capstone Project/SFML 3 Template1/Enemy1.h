@@ -1,17 +1,12 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <cmath> 
+#include "EnemyTextures.h"
 
 #pragma once
 class Enemy1
 {
 public:
-    // --- Textures ---
-    sf::Texture idleTexture;
-    sf::Texture runTexture;
-    sf::Texture attackTexture;
-    sf::Texture defendTexture;
-
     // --- Sprite and Movement ---
     std::unique_ptr<sf::Sprite> sprite;
     sf::Vector2f pos;
@@ -39,6 +34,7 @@ public:
     Animation* currentAnim = nullptr;
 
     bool isOnGround = false;
+    void Reset();
 
     // --- Animation Timing ---
     int m_frameNow{ 0 };

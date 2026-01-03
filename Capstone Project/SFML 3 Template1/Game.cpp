@@ -15,13 +15,23 @@
 /// </summary>
 Game::Game() :
 	m_window{ sf::VideoMode{ {1000, 800}, 32 }, "SFML Game 3.0" },
-	m_DELETEexitGame{ false }
+	m_DELETEexitGame{ false },
+	m_gameTimer(0.f)
 {
 	setupTexts();
 	m_mainMenu = std::make_unique<Menu>(m_jerseyFont);
 	m_Player.SetupPlayer();
 	m_showMenu = true;
 	m_useSpotify = false;
+
+	if (!g_enemyTextures.load())
+	{
+		throw std::runtime_error("Failed to load enemy textures");
+	}
+
+	m_easyConfig = EnemySpawnConfig(800.f, 1200.f, 5.0f, 2);    // 2 enemies max, 5s cooldown
+	m_normalConfig = EnemySpawnConfig(800.f, 1200.f, 3.0f, 3);  // 3 enemies max, 3s cooldown
+	m_hardConfig = EnemySpawnConfig(800.f, 1200.f, 1.5f, 5);    // 5 enemies max, 1.5s cooldown
 }
 /// <summary>
 /// default destructor we didn't dynamically allocate anything
@@ -106,9 +116,9 @@ void Game::processEvents()
 
 							// Start Spotify API for track info
 							std::cout << "Starting Spotify server..." << std::endl;
-#ifdef _WIN32
+							#ifdef _WIN32
 							system("start cmd /k \"..\\..\\Spotify test\\start_spotify_server.bat\"");
-#endif
+							#endif
 							std::this_thread::sleep_for(std::chrono::seconds(3));
 							m_spotifyClient.StartPolling();
 
@@ -129,7 +139,6 @@ void Game::processEvents()
 				}
 			}
 		}
-
 		// Mouse movement (hover tooltips)
 		if (newEvent->is<sf::Event::MouseMoved>())
 		{
@@ -170,15 +179,15 @@ void Game::initializeGame()
 
 	// Enemies
 	m_enemies.clear();
-	m_enemies.reserve(2);
 
-	for (int i = 0; i < 2; ++i)
-	{
-		m_enemies.emplace_back();
-		m_enemies.back().SetupEnemy1();
-		m_enemies.back().pos = { 850.f + (i * 300.f), 760.f };
-		m_enemies.back().sprite->setPosition(m_enemies.back().pos);
-	}
+	// Configure spawn manager
+	m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
+
+	// Spawn 2 initial enemies so player sees something immediately
+	m_enemySpawnManager.ForceSpawn({ 850.f, 746.f }, m_enemies);
+	m_enemySpawnManager.ForceSpawn({ 1150.f, 746.f }, m_enemies);
+
+	m_gameTimer = 0.f;
 
 	// Tileset
 	if (!m_tilesetTexture.loadFromFile(
@@ -194,7 +203,7 @@ void Game::initializeGame()
 
 	loadChunkAt(0, 0);
 	m_chunkWidth = m_chunks[0].getWidth();
-
+	
 	for (int i = 1; i < VISIBLE_CHUNKS; ++i)
 	{
 		loadChunkAt(i, i * m_chunkWidth);
@@ -269,18 +278,12 @@ void Game::update(sf::Time t_deltaTime)
 
 	if (m_useSpotify)
 	{
-		// Get BPM from system audio (reliable)
-		//rawBPM = m_systemAudio.GetCurrentBPM();
-
-		// Get track info from Spotify API (for UI/display)
 		auto trackInfo = m_spotifyClient.GetCurrentTrack();
-	
 	}
 	else
 	{
 		rawBPM = m_bpmStream.getCurrentBPM();
 	}
-
 	// Ignore invalid readings
 	if (rawBPM <= 0.f)
 	{
@@ -351,6 +354,17 @@ void Game::update(sf::Time t_deltaTime)
 
 	m_dynamicBackground.update(m_cameraOffset);
 	float dt = t_deltaTime.asSeconds();
+	m_gameTimer += dt;  // Track total game time
+
+	if (m_currentBPM > 140.f) {
+		m_enemySpawnManager.SetSpawnConfig(m_hardConfig);
+	}
+	else if (m_currentBPM < 100.f) {
+		m_enemySpawnManager.SetSpawnConfig(m_easyConfig);
+	}
+	else {
+		m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
+	}
 
 	// PLAYER COLLISION
 	m_Player.isOnGround = false;
@@ -390,15 +404,28 @@ void Game::update(sf::Time t_deltaTime)
 
 	if (!m_showSkillTree)
 	{
+		float rightmostChunkX = -999999.0f;
+		for (const auto& chunk : m_chunks) {
+			float chunkRight = chunk.getPosition().x + chunk.getWidth();
+			if (chunkRight > rightmostChunkX)
+				rightmostChunkX = chunkRight;
+		}
+
+		// UPDATE SPAWN MANAGER (handles automatic spawning)
+		m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, rightmostChunkX);
+
+		// UPDATE ALL ENEMIES
 		for (auto& enemy : m_enemies)
 		{
+			// Skip dead enemies (spawn manager will recycle them)
+			if (enemy.health <= 0) continue;
+
 			float dx = enemy.pos.x - m_Player.pos.x;
 			if (std::abs(dx) > 2000.f) continue;
 
-			//. Update enemy AI 
 			enemy.Update(dt, m_Player.pos);
 
-			//  Check player attacking enemy
+			// Check player attacking enemy
 			if (m_Player.canDamageEnemy)
 			{
 				float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
@@ -412,31 +439,17 @@ void Game::update(sf::Time t_deltaTime)
 
 					if (enemy.health <= 0)
 					{
-						std::cout << "Enemy defeated! Recycling..." << std::endl;
+						std::cout << "Enemy defeated!" << std::endl;
 						m_skillTree.AddSkillPoint();
 
-						// Find actual rightmost chunk dynamically
-						float rightmostChunkX = -999999.0f;
-						for (const auto& chunk : m_chunks) {
-							float chunkRight = chunk.getPosition().x + chunk.getWidth();
-							if (chunkRight > rightmostChunkX)
-								rightmostChunkX = chunkRight; // way was causing issues due to recycling of chunks
-						}
-						float randomOffset = 800.f + (rand() % 400);  // 800-1199 range
-
-						enemy.health = Enemy1::MAX_HEALTH;
-						enemy.pos = { rightmostChunkX + randomOffset, 746.f };
-						enemy.sprite->setPosition(enemy.pos);
-						enemy.UpdateHealthBar();
-						enemy.state = Enemy1::EnemyState::Idle;
-						enemy.attackCooldown = 0.f;
-						enemy.hasDealtDamage = false;
-						enemy.canDamagePlayer = false;
+						// *** REMOVE ALL YOUR OLD RECYCLING CODE ***
+						// The spawn manager now handles recycling automatically!
+						// Just let the enemy stay dead (health = 0) and it'll respawn
 					}
 				}
 			}
 
-			//  Check enemy attacking player
+			// Check enemy attacking player
 			if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
 			{
 				float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
@@ -450,7 +463,7 @@ void Game::update(sf::Time t_deltaTime)
 
 					m_Player.velocity.x = knockbackDirection * 200.f;
 					if (m_Player.isOnGround)
-						m_Player.velocity.y = -10.f;  // Increased for visible effect
+						m_Player.velocity.y = -10.f;
 
 					m_Player.isKnockedBack = true;
 					m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
@@ -468,6 +481,7 @@ void Game::update(sf::Time t_deltaTime)
 			}
 		}
 	}
+
 }
 
 
@@ -519,6 +533,12 @@ void Game::render()
 
 		for (auto& enemy : m_enemies)
 		{
+			// Skip rendering dead enemies
+			if (enemy.health <= 0) continue;
+
+			// Skip enemies that haven't been fully initialized
+			if (!enemy.sprite) continue;
+
 			sf::Vector2f enemyRenderPos =
 				enemy.pos - m_cameraOffset;
 			enemy.sprite->setPosition(enemyRenderPos);

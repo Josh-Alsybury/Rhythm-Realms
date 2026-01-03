@@ -3,50 +3,71 @@
 
 Enemy1::Enemy1()
 {
-	pos = { 1200.f, 750.f };
-	velocity = { 0.f, 0.f };
+    pos = { 1200.f, 750.f };
+    velocity = { 0.f, 0.f };
+
+    // Zero-initialize ALL animation structures (this sets everything to 0/nullptr)
+    idleAnim = {};
+    runAnim = {};
+    attackAnim = {};
+    defendAnim = {};
+
+    // Explicitly set texture pointers to nullptr for clarity
+    idleAnim.texture = nullptr;
+    runAnim.texture = nullptr;
+    attackAnim.texture = nullptr;
+    defendAnim.texture = nullptr;
+
+    currentAnim = nullptr;
+
     std::cout << "Constructor - Enemy pos: " << pos.x << ", " << pos.y << std::endl;
 }
 
+void Enemy1::Reset()
+{
+    health = MAX_HEALTH;
+    state = EnemyState::Idle;
+    attackCooldown = 0.f;
+    hasDealtDamage = false;
+    canDamagePlayer = false;
+    velocity = { 0.f, 0.f };
+
+    m_frameNow = 0;
+    m_frameCount = 0.f;
+
+    currentAnim = &idleAnim;
+    sprite->setTexture(*idleAnim.texture, false);
+    sprite->setTextureRect({ {0, 0}, {96, 64} });
+
+    UpdateHealthBar();
+}
+
+
 void Enemy1::SetupEnemy1()
 {
-    if (!idleTexture.loadFromFile("ASSETS/IMAGES/Samurai2/IDLE.png"))
-        throw std::runtime_error("Failed to load Samurai2/IDLE.png!");
-    if (!runTexture.loadFromFile("ASSETS/IMAGES/Samurai2/RUN.png"))
-        throw std::runtime_error("Failed to load Samurai2/RUN.png!");
-    if (!attackTexture.loadFromFile("ASSETS/IMAGES/Samurai2/ATTACK1.png"))
-        throw std::runtime_error("Failed to load Samurai2/ATTACK1.png!");
-    if (!defendTexture.loadFromFile("ASSETS/IMAGES/Samurai2/DEFENCE.png"))
-        throw std::runtime_error("Failed to load Samurai2/DEFENCE.png!");
-
-    std::cout << "IDLE texture: " << idleTexture.getSize().x << " x " << idleTexture.getSize().y << std::endl;
-    std::cout << "RUN texture: " << runTexture.getSize().x << " x " << runTexture.getSize().y << std::endl;
-    std::cout << "ATTACK texture: " << attackTexture.getSize().x << " x " << attackTexture.getSize().y << std::endl;
-    std::cout << "DEFENCE texture: " << defendTexture.getSize().x << " x " << defendTexture.getSize().y << std::endl;
-
     // Setup animations with CORRECT frame widths
-    idleAnim.texture = &idleTexture;
+    idleAnim.texture = &g_enemyTextures.idle;
     idleAnim.frameCount = 5;
     idleAnim.frameWidth = 96;   // Changed from 48
     idleAnim.frameHeight = 64;
 
-    runAnim.texture = &runTexture;
+    runAnim.texture = &g_enemyTextures.run;
     runAnim.frameCount = 7;     // Changed from 8
     runAnim.frameWidth = 96;    // Changed from 84
     runAnim.frameHeight = 64;
 
-    attackAnim.texture = &attackTexture;
+    attackAnim.texture = &g_enemyTextures.attack;
     attackAnim.frameCount = 5;  // Changed from 6
     attackAnim.frameWidth = 96; // Changed from 80
     attackAnim.frameHeight = 64;
 
-    defendAnim.texture = &defendTexture;
+    defendAnim.texture = &g_enemyTextures.defend;
     defendAnim.frameCount = 6;
     defendAnim.frameWidth = 96; // Keep at 96
     defendAnim.frameHeight = 64;
 
     // Create sprite with correct initial frame
-    sprite = std::make_unique<sf::Sprite>(idleTexture);
+    sprite = std::make_unique<sf::Sprite>(*idleAnim.texture);
     sprite->setScale(sf::Vector2f(2.2f, 2.2f));
     sprite->setPosition(pos);
     sprite->setTextureRect(sf::IntRect({ 0, 0 }, { 96, 64 }));
@@ -111,8 +132,22 @@ void Enemy1::Update(float dt, sf::Vector2f playerPos)
 }
 void Enemy1::AnimateEnemy(float dt)
 {
-    if (!currentAnim || !currentAnim->texture)
+    // Enhanced safety checks
+    if (!currentAnim) {
+        std::cerr << "AnimateEnemy: currentAnim is null!" << std::endl;
         return;
+    }
+
+    if (!currentAnim->texture) {
+        std::cerr << "AnimateEnemy: texture is null!" << std::endl;
+        return;
+    }
+
+    // Additional check: verify sprite exists
+    if (!sprite) {
+        std::cerr << "AnimateEnemy: sprite is null!" << std::endl;
+        return;
+    }
 
     m_frameCount += m_framePlus * dt * 60;
     if (m_frameCount >= 1.0f)
@@ -120,6 +155,12 @@ void Enemy1::AnimateEnemy(float dt)
         m_frameNow = (m_frameNow + 1) % currentAnim->frameCount;
         m_frameCount = 0.0f;
     }
+
+    if (!currentAnim || !currentAnim->texture)
+        return;
+
+    if (currentAnim->frameWidth <= 0 || currentAnim->frameHeight <= 0)
+        return;
 
     // Get frame rect - ADD CLAMPING
     int xPos = m_frameNow * currentAnim->frameWidth;
