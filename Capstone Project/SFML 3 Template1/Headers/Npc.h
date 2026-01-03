@@ -12,8 +12,6 @@ public:
 	sf::Sprite sprite{ texture };
 	sf::Vector2f pos;
 
-	sf::Vector2f velocity{ 0.f, 0.f };   
-	sf::Vector2f acceleration{ 0.f, 0.f }; 
 
 private:
 

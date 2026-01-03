@@ -8,6 +8,8 @@ const CLIENT_SECRET = '4cae7109583c4f728ad63f6262133403';
 const REDIRECT_URI = 'http://127.0.0.1:8888/callback';
 
 let tokens = {}; // simple in-memory token storage
+let lastTrackId = null;
+let currentBPM = 120;
 
 // Exchange authorization code for tokens
 function exchangeCodeForTokens(code) {
@@ -62,11 +64,15 @@ function exchangeCodeForTokens(code) {
 }
 
 // Fetch currently playing track
+// Fetch currently playing track
 function getCurrentlyPlaying(callback) {
   if (!tokens.access_token) {
+    console.log('❌ No access token available');
     callback({ error: 'No access token yet.' });
     return;
   }
+
+  console.log('📡 Polling Spotify API...');
 
   const options = {
     hostname: 'api.spotify.com',
@@ -77,22 +83,165 @@ function getCurrentlyPlaying(callback) {
     },
   };
 
+const req = https.request(options, (res) => {
+  console.log(`🔍 Spotify API Response Status: ${res.statusCode}`);
+
+  if (res.statusCode === 401) {
+    refreshAccessToken();
+    callback({ error: 'Token refreshing' });
+    return;
+  }
+
+  if (res.statusCode === 204) {
+    callback({ playing: false, bpm: currentBPM });
+    return;
+  }
+
+  let data = '';
+  res.on('data', (chunk) => data += chunk);
+
+  res.on('end', () => {
+    if (!data) {
+      callback({ playing: false, bpm: currentBPM });
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(data);
+
+      // ✅ LOCAL TRACK CHECK — CORRECT LOCATION
+      if (parsed?.item?.is_local) {
+        console.log('⚠ Local track — BPM unavailable');
+        callback({
+          playing: parsed?.is_playing ?? false,
+          bpm: currentBPM
+        });
+        return;
+      }
+
+      const trackId = parsed?.item?.id;
+      const trackName = parsed?.item?.name;
+      const artistName = parsed?.item?.artists?.[0]?.name;
+
+      if (trackId && trackId !== lastTrackId) {
+        lastTrackId = trackId;
+        fetchTrackBPM(trackId);
+      }
+
+      callback({
+        track: trackName,
+        artist: artistName,
+        bpm: currentBPM,
+        playing: parsed?.is_playing
+      });
+
+    } catch (err) {
+      callback({ error: err.message, bpm: currentBPM });
+    }
+  });
+});
+
+  req.on('error', (e) => {
+    console.error('❌ Request error:', e.message);
+    callback({ error: e.message, bpm: currentBPM });
+  });
+  
+  req.end();
+}
+
+function fetchTrackBPM(trackId) {
+  console.log(`🎼 Fetching BPM for track: ${trackId}`);
+
+  const options = {
+    hostname: 'api.spotify.com',
+    path: `/v1/audio-features/${trackId}`,
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${tokens.access_token}`,
+    },
+  };
+
   const req = https.request(options, (res) => {
+    console.log(`🔍 Audio Features Status: ${res.statusCode}`);
+
+    if (res.statusCode === 403) {
+      console.log('🚫 BPM unavailable for this track (Spotify restriction)');
+      return;
+    }
+
     let data = '';
     res.on('data', (chunk) => data += chunk);
     res.on('end', () => {
       try {
         const parsed = JSON.parse(data);
-        callback(parsed);
-      } catch {
-        callback({ error: 'No track playing or bad response' });
+        if (parsed.tempo) {
+          currentBPM = parsed.tempo;
+          console.log(`✅ BPM updated: ${currentBPM}`);
+        }
+      } catch (err) {
+        console.error('❌ BPM parse error:', err);
       }
     });
   });
 
-  req.on('error', (e) => callback({ error: e.message }));
+  req.on('error', (e) => console.error('❌ BPM request error:', e));
   req.end();
 }
+
+function refreshAccessToken() {
+  if (!tokens.refresh_token) return;
+
+  const postData = querystring.stringify({
+    grant_type: 'refresh_token',
+    refresh_token: tokens.refresh_token,
+  });
+
+  const authString = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+
+  const options = {
+    hostname: 'accounts.spotify.com',
+    path: '/api/token',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${authString}`,
+      'Content-Length': Buffer.byteLength(postData),
+    },
+  };
+
+  const req = https.request(options, (res) => {
+    let body = '';
+    res.on('data', (chunk) => body += chunk);
+    res.on('end', () => {
+      const parsed = JSON.parse(body);
+      if (parsed.access_token) {
+        tokens.access_token = parsed.access_token;
+        console.log('🔄 Access token refreshed');
+      }
+    });
+  });
+
+  req.write(postData);
+  req.end();
+}
+
+const { exec } = require('child_process');
+
+function openLogin() {
+  const scopes = 'user-read-playback-state user-read-currently-playing'
+  const authURL =
+    'https://accounts.spotify.com/authorize?' +
+    querystring.stringify({
+      response_type: 'code',
+      client_id: CLIENT_ID,
+      scope: scopes,
+      redirect_uri: REDIRECT_URI
+    });
+
+  exec(`start "" "${authURL}"`);
+}
+
+
 
 // Basic HTTP server
 const server = http.createServer((req, res) => {
@@ -126,4 +275,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(8888, '127.0.0.1', () => {
   console.log('Server running at http://127.0.0.1:8888/');
+  openLogin();
 });

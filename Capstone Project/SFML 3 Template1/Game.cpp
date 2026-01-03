@@ -4,7 +4,7 @@
 /// </summary>
 #include "Headers/Game.h"
 #include <iostream>
-
+#include <cstdlib> 
 
 /// <summary>
 /// default constructor
@@ -14,69 +14,15 @@
 /// load and setup the sounds
 /// </summary>
 Game::Game() :
-	m_window{ sf::VideoMode{ sf::Vector2u{1000U, 800U}, 32U }, "SFML Game 3.0" },
-	m_DELETEexitGame{false} //when true game will exit
+	m_window{ sf::VideoMode{ {1000, 800}, 32 }, "SFML Game 3.0" },
+	m_DELETEexitGame{ false }
 {
-	m_dynamicBackground.loadtheme("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
-
-	m_chunkPaths = {
-	"ASSETS/CHUNKS/Chunk1(Forest).tmj",
-	"ASSETS/CHUNKS/Chunk2(Forest).tmj",
-	"ASSETS/CHUNKS/Chunk3(Forest).tmj",
-	"ASSETS/CHUNKS/Chunk4(Forest).tmj"
-	};
-
-
-	m_Player.pos.x = m_window.getSize().x / 2.f;
-	setupSprites(); // load texture
-	setupTexts();   // load font
+	setupTexts();
+	m_mainMenu = std::make_unique<Menu>(m_jerseyFont);
 	m_Player.SetupPlayer();
-	m_Player.HealCall();
-	m_Player.Health();
-
-	m_enemies.reserve(2);  // Pre-allocate for exactly 2
-	m_chunks.reserve(VISIBLE_CHUNKS);  // ADD THIS
-
-	// Initialize both enemies
-	for (int i = 0; i < 2; ++i)
-	{
-		m_enemies.emplace_back(); // adds a new Enemy1 to the vector
-		m_enemies.back().SetupEnemy1(); // setup the last added enemy
-		m_enemies.back().pos = { 850.f + (i * 300.f), 760.f };
-		m_enemies.back().sprite->setPosition(m_enemies.back().pos);
-	}
-
-	setupAudio();
-
-	if (!m_tilesetTexture.loadFromFile("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Tileset/Tileset.png"))
-	{
-		std::cout << "Failed to load tileset!" << std::endl;
-	}
-	m_tilesetTexture.setSmooth(false);
-
-	m_chunks.resize(VISIBLE_CHUNKS);
-
-	// Load first chunk to get actual width
-	if (!loadChunkAt(0, 0))
-	{
-		std::cout << "Failed to load initial chunk!" << std::endl;
-		return;
-	}
-
-	// NOW we can safely get the chunk width
-	m_chunkWidth = m_chunks[0].getWidth();
-	std::cout << "Chunk width detected: " << m_chunkWidth << " pixels" << std::endl;
-
-	// Load remaining chunks using the correct width
-	for (int i = 1; i < VISIBLE_CHUNKS; ++i)
-	{
-		loadChunkAt(i, i * m_chunkWidth);
-	}
-
-	m_nextChunkIndex = VISIBLE_CHUNKS;
-	std::cout << "Loaded " << VISIBLE_CHUNKS << " chunks" << std::endl;
+	m_showMenu = true;
+	m_useSpotify = false;
 }
-
 /// <summary>
 /// default destructor we didn't dynamically allocate anything
 /// so we don't need to free it, but mthod needs to be here
@@ -119,44 +65,152 @@ void Game::run()
 /// </summary>
 void Game::processEvents()
 {
-	
 	while (const std::optional newEvent = m_window.pollEvent())
 	{
-		if ( newEvent->is<sf::Event::Closed>()) // close window message 
+		// Window close
+		if (newEvent->is<sf::Event::Closed>())
 		{
 			m_DELETEexitGame = true;
 		}
-		if (newEvent->is<sf::Event::KeyPressed>()) 
+
+		// Keyboard
+		if (newEvent->is<sf::Event::KeyPressed>())
 		{
 			processKeys(newEvent);
 		}
 
-		// Handle mouse clicks
+		// Mouse button pressed
 		if (newEvent->is<sf::Event::MouseButtonPressed>())
 		{
-			if (m_showSkillTree)
+			const auto* mousePress = newEvent->getIf<sf::Event::MouseButtonPressed>();
+
+			if (mousePress->button == sf::Mouse::Button::Left)
 			{
-				const auto* mousePress = newEvent->getIf<sf::Event::MouseButtonPressed>();
-				if (mousePress->button == sf::Mouse::Button::Left)
+				sf::Vector2f mousePos =
+					m_window.mapPixelToCoords(mousePress->position);
+
+				// ---- MENU CLICK HANDLING ----
+				if (m_showMenu)
 				{
-					sf::Vector2f mousePos = m_window.mapPixelToCoords(mousePress->position);
+					m_mainMenu->HandleClick(mousePos);
+
+					if (m_mainMenu->IsComplete())
+					{
+						m_selectedAudioSource =
+							m_mainMenu->GetSelectedSource();
+
+						m_showMenu = false;
+						if (m_selectedAudioSource == Menu::AudioSource::Spotify)
+						{
+							m_useSpotify = true;
+
+							// Start Spotify API for track info
+							std::cout << "Starting Spotify server..." << std::endl;
+#ifdef _WIN32
+							system("start cmd /k \"..\\..\\Spotify test\\start_spotify_server.bat\"");
+#endif
+							std::this_thread::sleep_for(std::chrono::seconds(3));
+							m_spotifyClient.StartPolling();
+
+							// ALSO start system audio capture for BPM
+							/*if (m_systemAudio.Initialize())
+							{
+								m_systemAudio.StartCapture();
+								std::cout << "System audio BPM detection enabled!" << std::endl;
+							}*/
+						}
+						initializeGame(); //  moved out of constructor
+					}
+				}
+				// ---- SKILL TREE CLICK ----
+				else if (m_showSkillTree)
+				{
 					m_skillTree.HandleClick(mousePos);
 				}
 			}
 		}
 
-		// Handle mouse movement for hover tooltips
+		// Mouse movement (hover tooltips)
 		if (newEvent->is<sf::Event::MouseMoved>())
 		{
 			if (m_showSkillTree)
 			{
-				const auto* mouseMove = newEvent->getIf<sf::Event::MouseMoved>();
-				sf::Vector2f mousePos = m_window.mapPixelToCoords(mouseMove->position);
+				const auto* mouseMove =
+					newEvent->getIf<sf::Event::MouseMoved>();
+
+				sf::Vector2f mousePos =
+					m_window.mapPixelToCoords(mouseMove->position);
+
 				m_skillTree.UpdateHover(mousePos);
 			}
 		}
 	}
-	
+}
+
+void Game::initializeGame()
+{
+	// Background
+	m_dynamicBackground.loadtheme(
+		"ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
+
+	// Chunk paths
+	m_chunkPaths =
+	{
+		"ASSETS/CHUNKS/Chunk1(Forest).tmj",
+		"ASSETS/CHUNKS/Chunk2(Forest).tmj",
+		"ASSETS/CHUNKS/Chunk3(Forest).tmj",
+		"ASSETS/CHUNKS/Chunk4(Forest).tmj"
+	};
+
+	// Player setup
+	m_Player.pos.x = m_window.getSize().x / 2.f;
+	m_Player.SetupPlayer();
+	m_Player.HealCall();
+	m_Player.Health();
+
+	// Enemies
+	m_enemies.clear();
+	m_enemies.reserve(2);
+
+	for (int i = 0; i < 2; ++i)
+	{
+		m_enemies.emplace_back();
+		m_enemies.back().SetupEnemy1();
+		m_enemies.back().pos = { 850.f + (i * 300.f), 760.f };
+		m_enemies.back().sprite->setPosition(m_enemies.back().pos);
+	}
+
+	// Tileset
+	if (!m_tilesetTexture.loadFromFile(
+		"ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Tileset/Tileset.png"))
+	{
+		std::cout << "Failed to load tileset!" << std::endl;
+	}
+	m_tilesetTexture.setSmooth(false);
+
+	// Chunks
+	m_chunks.clear();
+	m_chunks.resize(VISIBLE_CHUNKS);
+
+	loadChunkAt(0, 0);
+	m_chunkWidth = m_chunks[0].getWidth();
+
+	for (int i = 1; i < VISIBLE_CHUNKS; ++i)
+	{
+		loadChunkAt(i, i * m_chunkWidth);
+	}
+
+	m_nextChunkIndex = VISIBLE_CHUNKS;
+
+	// Audio
+	if (!m_useSpotify)
+	{
+		setupAudio(); // local BPM stream
+	}
+	else
+	{
+		std::cout << "Using Spotify BPM source" << std::endl;
+	}
 }
 
 
@@ -173,6 +227,9 @@ void Game::processKeys(const std::optional<sf::Event> t_event)
 	}
 	if (sf::Keyboard::Key::N == newKeypress->code)
 	{
+		if (m_useSpotify)
+			return;
+
 		switchSong();
 	}
 	if (sf::Keyboard::Key::T == newKeypress->code)
@@ -208,16 +265,32 @@ void Game::update(sf::Time t_deltaTime)
 {
 	checkKeyboardState();
 
-	static int frameCount = 0;
-	if (++frameCount % 300 == 0) {
-		float fps = 1.0f / t_deltaTime.asSeconds();
-		std::cout << "FPS: " << static_cast<int>(fps)
-			<< " | Player X: " << static_cast<int>(m_Player.pos.x)
-			<< " | Chunks: " << m_chunks.size()
-			<< " | Enemies: " << m_enemies.size() << std::endl;
+	float rawBPM = 0.f;
+
+	if (m_useSpotify)
+	{
+		// Get BPM from system audio (reliable)
+		//rawBPM = m_systemAudio.GetCurrentBPM();
+
+		// Get track info from Spotify API (for UI/display)
+		auto trackInfo = m_spotifyClient.GetCurrentTrack();
+	
+	}
+	else
+	{
+		rawBPM = m_bpmStream.getCurrentBPM();
 	}
 
-	m_currentBPM = m_bpmStream.getCurrentBPM();
+	// Ignore invalid readings
+	if (rawBPM <= 0.f)
+	{
+		rawBPM = m_currentBPM;
+	}
+
+	//  Smooth BPM
+	static float smoothedBPM = 120.f;
+	smoothedBPM += (rawBPM - smoothedBPM) * 0.05f;
+	m_currentBPM = smoothedBPM;
 
 	if (m_currentBPM > 0.0)
 	{
@@ -425,64 +498,50 @@ void Game::switchSong()
 /// </summary>
 void Game::render()
 {
-	m_window.clear(sf::Color::Blue);
+	m_window.clear(sf::Color(20, 20, 30));
 
-	sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
-	m_Player.sprite->setPosition(renderPos);
-	m_dynamicBackground.render(m_window);
-
-	for (auto& chunk : m_chunks)
+	if (m_showMenu)
 	{
-		chunk.draw(m_window, m_cameraOffset);
+		m_mainMenu->Draw(m_window);
 	}
-
-	// Draw game world first
-	for (auto& enemy : m_enemies)
+	else
 	{
-		sf::Vector2f enemyRenderPos = enemy.pos - m_cameraOffset;
-		enemy.sprite->setPosition(enemyRenderPos);
-		enemy.detectionRadius.setPosition(enemyRenderPos);
-		enemy.attackRadius.setPosition(enemyRenderPos);
+		// ---- NORMAL GAME RENDERING ----
+		sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
+		m_Player.sprite->setPosition(renderPos);
 
-		m_window.draw(enemy.detectionRadius);
-		m_window.draw(enemy.attackRadius);
-		m_window.draw(*enemy.sprite);
+		m_dynamicBackground.render(m_window);
 
-		for (auto& bar : enemy.healthBar)
+		for (auto& chunk : m_chunks)
 		{
-			sf::Vector2f originalPos = bar.getPosition();
-			bar.setPosition(originalPos - m_cameraOffset);
-			m_window.draw(bar);
-			bar.setPosition(originalPos);  // Restore position
+			chunk.draw(m_window, m_cameraOffset);
 		}
-	}
 
-	m_window.draw(*m_Player.sprite);
-	m_window.draw(m_bpmText);
+		for (auto& enemy : m_enemies)
+		{
+			sf::Vector2f enemyRenderPos =
+				enemy.pos - m_cameraOffset;
+			enemy.sprite->setPosition(enemyRenderPos);
+			m_window.draw(*enemy.sprite);
+		}
 
-	// Draw UI elements (always on top)
-	for (int i = 0; i < m_Player.HealsCount; i++)
-	{
-		m_window.draw(m_Player.HealSphere[i]);
-	}
+		m_window.draw(*m_Player.sprite);
+		m_window.draw(m_bpmText);
 
-	for (auto& bar : m_Player.HealBar)
-	{
-		m_window.draw(bar);
-	}
+		if (m_showSkillTree)
+		{
+			sf::RectangleShape overlay(
+				sf::Vector2f(m_window.getSize()));
+			overlay.setFillColor(sf::Color(0, 0, 0, 180));
+			m_window.draw(overlay);
 
-	if (m_showSkillTree)
-	{
-		// QOL: Add semi-transparent dark overlay
-		sf::RectangleShape overlay(sf::Vector2f(m_window.getSize()));
-		overlay.setFillColor(sf::Color(0, 0, 0, 180));  // Dark transparent background
-		m_window.draw(overlay);
-
-		m_skillTree.Draw(m_window);
+			m_skillTree.Draw(m_window);
+		}
 	}
 
 	m_window.display();
 }
+
 
 /// <summary>
 /// load the font and setup the text message for screen

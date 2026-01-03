@@ -24,6 +24,8 @@
 #include "BpmStream.h"
 #include "Enemy1.h"
 #include "SkillTree.h"
+#include "Menu.h"
+#include "SpotifyClient.h"
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
 
@@ -47,6 +49,7 @@ private:
 	void processEvents();
 	void processKeys(const std::optional<sf::Event> t_event);
 	void checkKeyboardState();
+	void initializeGame();
 	void update(sf::Time t_deltaTime);
 	void switchSong();
 	void render();
@@ -56,8 +59,16 @@ private:
 	void setupAudio();
 
 
-	sf::RenderWindow m_window; // main SFML window
-	sf::Font m_jerseyFont;// font used by message
+	sf::Font m_jerseyFont;
+	std::unique_ptr<Menu> m_mainMenu;  // Use pointer so we can initialize after font loads
+	bool m_showMenu = true;
+	Menu::AudioSource m_selectedAudioSource = Menu::AudioSource::None;
+
+	// Spotify
+	SpotifyClient m_spotifyClient;
+	bool m_useSpotify = false;
+
+	sf::RenderWindow m_window; // main SFML window;
 	sf::Text m_formationHintText{ m_jerseyFont };
 
 	void updateChunks();  //Manages chunk loading/unloading

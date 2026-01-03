@@ -79,12 +79,12 @@ void BpmStream::analyzeBPM()
     {
         std::cout << "  Candidate " << i + 1 << ": " << candidates[i] << " BPM" << std::endl;
     }
-    // Check if the top candidate has a strong half-tempo
+    // Check if the top candidate has a strong half tempo
     if (candidates.size() >= 2)
     {
         double ratio = m_currentBpm / candidates[1];
 
-        // If the ratio is close to 2:1, we have a double-time detection (counting the wrong rhythmic layer)
+        // If the ratio is close to 2:1,double time detection (counting the wrong rhythic layer)
         if (ratio >= 1.95 && ratio <= 2.05)
         {
             // Check if the second candidate is in a more typical range
@@ -92,20 +92,17 @@ void BpmStream::analyzeBPM()
             // and candidate 1 is high (>150)
             if (candidates[1] >= 60.0 && candidates[1] <= 140.0 && m_currentBpm > 150.0)
             {
-                std::cout << "Detected likely double-time (ratio: " << ratio
-                    << "), using half BPM: " << candidates[1] << std::endl;
+                std::cout << "Detected likely double-time (ratio: " << ratio << "), using half BPM: " << candidates[1] << std::endl;
                 m_currentBpm = candidates[1];
             }
             else
             {
-                std::cout << "Keeping original BPM: " << m_currentBpm
-                    << " (ratio: " << ratio << " but in acceptable range)" << std::endl;
+                std::cout << "Keeping original BPM: " << m_currentBpm<< " (ratio: " << ratio << " but in acceptable range)" << std::endl;
             }
         }
         else
         {
-            std::cout << "Using detected BPM: " << m_currentBpm
-                << " (ratio to candidate 2: " << ratio << ")" << std::endl;
+            std::cout << "Using detected BPM: " << m_currentBpm<< " (ratio to candidate 2: " << ratio << ")" << std::endl;
         }
     }
     else
