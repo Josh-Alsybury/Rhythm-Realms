@@ -7,7 +7,7 @@ void player::Jump()
     if (isHealing == false)
     {
         if (isOnGround)
-            velocity.y -= 90;
+            velocity.y -= 120;
         isJump = true;
         isOnGround = false;
         state = PlayerState::Jump_start;

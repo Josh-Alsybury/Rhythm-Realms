@@ -32,6 +32,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Chunk.h" />
+    <ClInclude Include="Debug.h" />
     <ClInclude Include="Enemy1.h" />
     <ClInclude Include="EnemySpawnManager.h" />
     <ClInclude Include="EnemyTextures.h" />
@@ -51,6 +52,7 @@
     <ClCompile Include="BPM.cpp" />
     <ClCompile Include="BpmStream.cpp" />
     <ClCompile Include="Chunk.cpp" />
+    <ClCompile Include="Debug.cpp" />
     <ClCompile Include="DynamicBackground.cpp" />
     <ClCompile Include="Enemy1.cpp" />
     <ClCompile Include="EnemySpawnManager.cpp" />

@@ -28,6 +28,8 @@
 #include "Menu.h"
 #include "SpotifyClient.h"
 #include "EnemySpawnManager.h"
+#include "Debug.h"
+
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
 
@@ -60,6 +62,8 @@ private:
 	void setupSprites();
 	void setupAudio();
 
+	const float PLAYER_HITBOX_WIDTH = 30.f;
+	const float PLAYER_HITBOX_HEIGHT = 40.f;
 
 	sf::Font m_jerseyFont;
 	std::unique_ptr<Menu> m_mainMenu;  // Use pointer so we can initialize after font loads
@@ -81,6 +85,8 @@ private:
 	float m_chunkWidth = 640.0f;   // Width of each chunk (20 tiles * 32px)
 	int m_nextChunkIndex = 0;
 	sf::Texture m_tilesetTexture;
+
+	bool m_showDebugCollision = false;
 
 	// Enemy spawning
 	EnemySpawnManager m_enemySpawnManager;

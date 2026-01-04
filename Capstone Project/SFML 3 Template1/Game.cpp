@@ -29,9 +29,9 @@ Game::Game() :
 		throw std::runtime_error("Failed to load enemy textures");
 	}
 
-	m_easyConfig = EnemySpawnConfig(800.f, 1200.f, 5.0f, 2);    // 2 enemies max, 5s cooldown
-	m_normalConfig = EnemySpawnConfig(800.f, 1200.f, 3.0f, 3);  // 3 enemies max, 3s cooldown
-	m_hardConfig = EnemySpawnConfig(800.f, 1200.f, 1.5f, 5);    // 5 enemies max, 1.5s cooldown
+	m_easyConfig = EnemySpawnConfig(800.f, 1200.f, 5.0f, 2);
+	m_normalConfig = EnemySpawnConfig(800.f, 1200.f, 3.0f, 3);
+	m_hardConfig = EnemySpawnConfig(800.f, 1200.f, 1.5f, 5);
 }
 /// <summary>
 /// default destructor we didn't dynamically allocate anything
@@ -50,22 +50,22 @@ Game::~Game()
 /// if updates run slow then don't render frames
 /// </summary>
 void Game::run()
-{	
+{
 	sf::Clock clock;
 	sf::Time timeSinceLastUpdate = sf::Time::Zero;
 	const float fps{ 60.0f };
 	sf::Time timePerFrame = sf::seconds(1.0f / fps);
 	while (m_window.isOpen())
 	{
-		processEvents(); 
+		processEvents();
 		timeSinceLastUpdate += clock.restart();
 		while (timeSinceLastUpdate > timePerFrame)
 		{
 			timeSinceLastUpdate -= timePerFrame;
-			processEvents(); 
-			update(timePerFrame); 
+			processEvents();
+			update(timePerFrame);
 		}
-		render(); 
+		render();
 	}
 }
 /// <summary>
@@ -116,18 +116,12 @@ void Game::processEvents()
 
 							// Start Spotify API for track info
 							std::cout << "Starting Spotify server..." << std::endl;
-							#ifdef _WIN32
+#ifdef _WIN32
 							system("start cmd /k \"..\\..\\Spotify test\\start_spotify_server.bat\"");
-							#endif
+#endif
 							std::this_thread::sleep_for(std::chrono::seconds(3));
 							m_spotifyClient.StartPolling();
 
-							// ALSO start system audio capture for BPM
-							/*if (m_systemAudio.Initialize())
-							{
-								m_systemAudio.StartCapture();
-								std::cout << "System audio BPM detection enabled!" << std::endl;
-							}*/
 						}
 						initializeGame(); //  moved out of constructor
 					}
@@ -203,7 +197,7 @@ void Game::initializeGame()
 
 	loadChunkAt(0, 0);
 	m_chunkWidth = m_chunks[0].getWidth();
-	
+
 	for (int i = 1; i < VISIBLE_CHUNKS; ++i)
 	{
 		loadChunkAt(i, i * m_chunkWidth);
@@ -229,10 +223,10 @@ void Game::initializeGame()
 /// <param name="t_event">key press event</param>
 void Game::processKeys(const std::optional<sf::Event> t_event)
 {
-	const sf::Event::KeyPressed *newKeypress = t_event->getIf<sf::Event::KeyPressed>();
+	const sf::Event::KeyPressed* newKeypress = t_event->getIf<sf::Event::KeyPressed>();
 	if (sf::Keyboard::Key::Escape == newKeypress->code)
 	{
-		m_DELETEexitGame = true; 
+		m_DELETEexitGame = true;
 	}
 	if (sf::Keyboard::Key::N == newKeypress->code)
 	{
@@ -243,7 +237,12 @@ void Game::processKeys(const std::optional<sf::Event> t_event)
 	}
 	if (sf::Keyboard::Key::T == newKeypress->code)
 	{
-		m_showSkillTree = !m_showSkillTree; 
+		m_showSkillTree = !m_showSkillTree;
+	}
+	if (sf::Keyboard::Key::F3 == newKeypress->code)
+	{
+		m_showDebugCollision = !m_showDebugCollision;
+		std::cout << "Debug collision: " << (m_showDebugCollision ? "ON" : "OFF") << std::endl;
 	}
 }
 
@@ -254,7 +253,7 @@ void Game::checkKeyboardState()
 {
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
 	{
-		m_DELETEexitGame = true; 
+		m_DELETEexitGame = true;
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
 	{
@@ -262,10 +261,6 @@ void Game::checkKeyboardState()
 	}
 }
 
-/// <summary>
-/// Update the game world
-/// </summary>
-/// <param name="t_deltaTime">time interval per frame</param>
 /// <summary>
 /// Update the game world
 /// </summary>
@@ -284,13 +279,12 @@ void Game::update(sf::Time t_deltaTime)
 	{
 		rawBPM = m_bpmStream.getCurrentBPM();
 	}
-	// Ignore invalid readings
+
 	if (rawBPM <= 0.f)
 	{
 		rawBPM = m_currentBPM;
 	}
 
-	//  Smooth BPM
 	static float smoothedBPM = 120.f;
 	smoothedBPM += (rawBPM - smoothedBPM) * 0.05f;
 	m_currentBPM = smoothedBPM;
@@ -341,7 +335,7 @@ void Game::update(sf::Time t_deltaTime)
 	}
 
 	float leftMargin = m_screenMargin;
-	float rightMargin = (m_window.getSize().x - 150)  - m_screenMargin;
+	float rightMargin = (m_window.getSize().x - 150) - m_screenMargin;
 	float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
 
 	if (playerScreenX > rightMargin)
@@ -354,7 +348,7 @@ void Game::update(sf::Time t_deltaTime)
 
 	m_dynamicBackground.update(m_cameraOffset);
 	float dt = t_deltaTime.asSeconds();
-	m_gameTimer += dt;  // Track total game time
+	m_gameTimer += dt;
 
 	if (m_currentBPM > 140.f) {
 		m_enemySpawnManager.SetSpawnConfig(m_hardConfig);
@@ -366,11 +360,37 @@ void Game::update(sf::Time t_deltaTime)
 		m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
 	}
 
-	// PLAYER COLLISION
+	sf::Vector2f oldPos = m_Player.pos;
+
+	m_Player.pos.x += m_Player.velocity.x * dt;
+
+	sf::FloatRect playerBox(
+		{ m_Player.pos.x - PLAYER_HITBOX_WIDTH / 2.f, m_Player.pos.y - PLAYER_HITBOX_HEIGHT / 10.f },
+		{ PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT }
+	);
+
+	bool hitWall = false;
+	for (auto& chunk : m_chunks)
+	{
+		if (chunk.isSolidTileWorld(playerBox.position.x, playerBox.position.y) ||
+			chunk.isSolidTileWorld(playerBox.position.x + playerBox.size.x, playerBox.position.y) ||
+			chunk.isSolidTileWorld(playerBox.position.x, playerBox.position.y + playerBox.size.y) ||
+			chunk.isSolidTileWorld(playerBox.position.x + playerBox.size.x, playerBox.position.y + playerBox.size.y))
+		{
+			hitWall = true;
+			break;
+		}
+	}
+
+	if (hitWall)
+	{
+		m_Player.pos.x = oldPos.x;
+		m_Player.velocity.x = 0;
+	}
+
 	m_Player.isOnGround = false;
 	float playerFeetY = m_Player.pos.y + 50.0f;
 
-	// Check the tile directly at player's feet, not 5 pixels below ( was a big problem with player bouncing due to this )
 	for (auto& chunk : m_chunks)
 	{
 		if (chunk.isSolidTileWorld(m_Player.pos.x, playerFeetY))
@@ -380,20 +400,14 @@ void Game::update(sf::Time t_deltaTime)
 				m_Player.isOnGround = true;
 				m_Player.velocity.y = 0;
 
-				// Snap player to exact tile surface
 				float chunkRelativeY = playerFeetY - chunk.getPosition().y;
 				int tileY = static_cast<int>(chunkRelativeY / 32.0f);
-
-				// Position player exactly on top of the tile
 				m_Player.pos.y = chunk.getPosition().y + (tileY * 32.0f) - 50.0f;
 				break;
 			}
 		}
 	}
-	//
-	// issues here were checks for below feet casued pixel skipping so it checks 5 pixels below the surface 
-	//	instead of the tile directly below the feet
-	//
+
 	m_Player.Update(dt);
 	updateChunks();
 
@@ -441,10 +455,6 @@ void Game::update(sf::Time t_deltaTime)
 					{
 						std::cout << "Enemy defeated!" << std::endl;
 						m_skillTree.AddSkillPoint();
-
-						// *** REMOVE ALL YOUR OLD RECYCLING CODE ***
-						// The spawn manager now handles recycling automatically!
-						// Just let the enemy stay dead (health = 0) and it'll respawn
 					}
 				}
 			}
@@ -507,9 +517,6 @@ void Game::switchSong()
 /// <summary>
 /// draw the frame and then switch buffers
 /// </summary>
-/// <summary>
-/// draw the frame and then switch buffers
-/// </summary>
 void Game::render()
 {
 	m_window.clear(sf::Color(20, 20, 30));
@@ -529,6 +536,13 @@ void Game::render()
 		for (auto& chunk : m_chunks)
 		{
 			chunk.draw(m_window, m_cameraOffset);
+		}
+
+		if (m_showDebugCollision)
+		{
+			Debug::DrawChunkCollision(m_window, m_chunks, m_cameraOffset);
+			Debug::DrawPlayerCollision(m_window, m_Player, m_cameraOffset, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT);
+			Debug::DrawEnemyCollision(m_window, m_enemies, m_cameraOffset);
 		}
 
 		for (auto& enemy : m_enemies)
@@ -589,9 +603,9 @@ void Game::setupSprites()
 void Game::setupAudio()
 {
 	m_songPaths = {
-		"ASSETS/AUDIO/ThemeofAmaterasu.wav",  
-		"ASSETS/AUDIO/Moorland.wav",                 
-		"ASSETS/AUDIO/Starjunk95OceanMemory.wav"                
+		"ASSETS/AUDIO/ThemeofAmaterasu.wav",
+		"ASSETS/AUDIO/Moorland.wav",
+		"ASSETS/AUDIO/Starjunk95OceanMemory.wav"
 	};
 	m_currentSongIndex = 0;
 

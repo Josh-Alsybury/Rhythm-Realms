@@ -222,3 +222,31 @@ bool Chunk::isSolidTileWorld(float worldX, float worldY) const {
     return isSolidTile(tileX, tileY);
 }
 
+void Chunk::drawDebugCollision(sf::RenderTarget& target, sf::Vector2f cameraOffset) {
+    for (int y = 0; y < m_height; ++y) {
+        for (int x = 0; x < m_width; ++x) {
+            int tileId = m_collisionTiles[y * m_width + x];
+
+            // Only draw if this tile is solid
+            if (tileId > 0) {
+                sf::RectangleShape rect;
+                rect.setSize(sf::Vector2f(m_tileSize, m_tileSize));
+
+                // Position in world space
+                float worldX = m_position.x + (x * m_tileSize);
+                float worldY = m_position.y + (y * m_tileSize);
+
+                // Convert to screen space
+                rect.setPosition({ worldX - cameraOffset.x, worldY - cameraOffset.y });
+
+                // Semi-transparent red overlay
+                rect.setFillColor(sf::Color(255, 0, 0, 100));
+                rect.setOutlineColor(sf::Color::Red);
+                rect.setOutlineThickness(1.f);
+
+                target.draw(rect);
+            }
+        }
+    }
+}
+
