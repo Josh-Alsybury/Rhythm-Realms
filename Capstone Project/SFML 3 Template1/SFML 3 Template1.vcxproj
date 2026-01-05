@@ -31,9 +31,11 @@
     <Media Include="ASSETS\AUDIO\beep.wav" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Arrow.h" />
     <ClInclude Include="Chunk.h" />
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Enemy1.h" />
+    <ClInclude Include="Enemy2.h" />
     <ClInclude Include="EnemySpawnManager.h" />
     <ClInclude Include="EnemyTextures.h" />
     <ClInclude Include="Headers\Background.h" />
@@ -48,6 +50,7 @@
     <ClInclude Include="SpotifyClient.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Arrow.cpp" />
     <ClCompile Include="Background.cpp" />
     <ClCompile Include="BPM.cpp" />
     <ClCompile Include="BpmStream.cpp" />
@@ -55,6 +58,7 @@
     <ClCompile Include="Debug.cpp" />
     <ClCompile Include="DynamicBackground.cpp" />
     <ClCompile Include="Enemy1.cpp" />
+    <ClCompile Include="Enemy2.cpp" />
     <ClCompile Include="EnemySpawnManager.cpp" />
     <ClCompile Include="EnemyTextures.cpp" />
     <ClCompile Include="Game.cpp" />

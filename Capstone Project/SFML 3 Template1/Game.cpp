@@ -24,7 +24,7 @@ Game::Game() :
 	m_showMenu = true;
 	m_useSpotify = false;
 
-	if (!g_enemyTextures.load())
+	if (!g_samuraiTextures.load() || !g_archerTextures.load())
 	{
 		throw std::runtime_error("Failed to load enemy textures");
 	}
@@ -198,6 +198,15 @@ void Game::initializeGame()
 	m_enemySpawnManager.ForceSpawn({ 1150.f, 746.f }, m_enemies);
 
 	m_gameTimer = 0.f;
+
+	m_archers.clear();
+	m_arrows.clear();
+
+	// Spawn 1 test archer
+	m_archers.emplace_back();
+	m_archers.back().SetupEnemy2();
+	m_archers.back().pos = { 1500.f, 746.f };
+	m_archers.back().sprite->setPosition(m_archers.back().pos);
 
 	// Tileset
 	if (!m_tilesetTexture.loadFromFile(
@@ -514,6 +523,92 @@ void Game::update(sf::Time t_deltaTime)
 					std::cout << "Player hit! Health: " << m_Player.health << std::endl;
 				}
 			}
+			for (auto& archer : m_archers)
+			{
+				// Skip dead archers
+				if (archer.health <= 0) continue;
+
+				float dx = archer.pos.x - m_Player.pos.x;
+				if (std::abs(dx) > 2000.f) continue;
+
+				archer.Update(dt, m_Player.pos);
+
+				// Check if archer is shooting (specific attack frames)
+				if (archer.state == Enemy2::EnemyState::Attacking
+					&& archer.canDamagePlayer
+					&& !archer.hasDealtDamage)
+				{
+					// Spawn arrow!
+					sf::Vector2f arrowStart = archer.pos;
+					arrowStart.x += archer.facingRight ? 40.f : -40.f;  // Offset from archer
+					m_arrows.emplace_back(arrowStart, archer.facingRight);
+
+					archer.hasDealtDamage = true;  // Only shoot one arrow per attack
+					std::cout << "Archer shot arrow!" << std::endl;
+				}
+
+				// Player attacking archer
+				if (m_Player.canDamageEnemy)
+				{
+					float dx = m_Player.attackHitbox.getPosition().x - archer.pos.x;
+					float dy = m_Player.attackHitbox.getPosition().y - archer.pos.y;
+					float distance = std::sqrt(dx * dx + dy * dy);
+
+					if (distance < m_Player.attackHitboxRadius + 30.f)
+					{
+						archer.TakeDamage(1);
+						m_Player.canDamageEnemy = false;
+
+						if (archer.health <= 0)
+						{
+							std::cout << "Archer defeated!" << std::endl;
+							m_skillTree.AddSkillPoint();
+						}
+					}
+				}
+			}
+
+			for (auto& arrow : m_arrows)
+			{
+				if (!arrow.active) continue;
+
+				arrow.Update(dt);
+
+				// Check if arrow hit player (SFML 3.0 syntax)
+				sf::FloatRect arrowBounds = arrow.getBounds();
+				sf::FloatRect playerBounds(
+					{ m_Player.pos.x - 15.f, m_Player.pos.y - 20.f },  // position
+					{ 30.f, 40.f }                                      // size
+				);
+
+				if (arrowBounds.findIntersection(playerBounds).has_value())
+				{
+					if (m_Player.canBlockEnemy)
+					{
+						std::cout << "Arrow blocked!" << std::endl;
+						arrow.active = false;
+					}
+					else
+					{
+						m_Player.TakeDamage(1);
+						arrow.active = false;
+						std::cout << "Arrow hit player! Health: " << m_Player.health << std::endl;
+					}
+				}
+
+				// Remove arrows that are off-screen
+				if (arrow.IsOffScreen(m_cameraOffset.x, m_window.getSize().x))
+				{
+					arrow.active = false;
+				}
+			}
+			// Clean up inactive arrows
+			m_arrows.erase(
+				std::remove_if(m_arrows.begin(), m_arrows.end(),
+					[](const Arrow& arrow) { return !arrow.active; }),
+				m_arrows.end()
+			);
+
 		}
 	}
 
@@ -582,6 +677,25 @@ void Game::render()
 				enemy.pos - m_cameraOffset;
 			enemy.sprite->setPosition(enemyRenderPos);
 			m_window.draw(*enemy.sprite);
+		}
+
+		for (auto& archer : m_archers)
+		{
+			if (archer.health <= 0) continue;
+			if (!archer.sprite) continue;
+
+			sf::Vector2f archerRenderPos = archer.pos - m_cameraOffset;
+			archer.sprite->setPosition(archerRenderPos);
+			m_window.draw(*archer.sprite);
+		}
+
+		for (auto& arrow : m_arrows)
+		{
+			if (!arrow.active) continue;
+
+			sf::Vector2f arrowRenderPos = arrow.getPosition() - m_cameraOffset;
+			arrow.sprite.setPosition(arrowRenderPos);
+			m_window.draw(arrow.sprite);
 		}
 
 		m_window.draw(*m_Player.sprite);

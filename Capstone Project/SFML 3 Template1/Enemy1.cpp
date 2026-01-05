@@ -46,22 +46,22 @@ void Enemy1::Reset()
 void Enemy1::SetupEnemy1()
 {
     // Setup animations with CORRECT frame widths
-    idleAnim.texture = &g_enemyTextures.idle;
+    idleAnim.texture = &g_samuraiTextures.idle;
     idleAnim.frameCount = 5;
     idleAnim.frameWidth = 96;   // Changed from 48
     idleAnim.frameHeight = 64;
 
-    runAnim.texture = &g_enemyTextures.run;
+    runAnim.texture = &g_samuraiTextures.run;
     runAnim.frameCount = 7;     // Changed from 8
     runAnim.frameWidth = 96;    // Changed from 84
     runAnim.frameHeight = 64;
 
-    attackAnim.texture = &g_enemyTextures.attack;
+    attackAnim.texture = &g_samuraiTextures.attack;
     attackAnim.frameCount = 5;  // Changed from 6
     attackAnim.frameWidth = 96; // Changed from 80
     attackAnim.frameHeight = 64;
 
-    defendAnim.texture = &g_enemyTextures.defend;
+    defendAnim.texture = &g_samuraiTextures.defend;
     defendAnim.frameCount = 6;
     defendAnim.frameWidth = 96; // Keep at 96
     defendAnim.frameHeight = 64;

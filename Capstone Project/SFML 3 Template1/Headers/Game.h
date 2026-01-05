@@ -24,6 +24,8 @@
 #include "BpmStream.h"
 #include "EnemyTextures.h"
 #include "Enemy1.h"
+#include "Enemy2.h"
+#include "Arrow.h" 
 #include "SkillTree.h"
 #include "Menu.h"
 #include "SpotifyClient.h"
@@ -41,6 +43,8 @@ public:
 	void run();
 
 	std::vector<Enemy1> m_enemies;
+	std::vector<Enemy2> m_archers;     
+	std::vector<Arrow> m_arrows;
 	int distance = 0;
 
 private:
