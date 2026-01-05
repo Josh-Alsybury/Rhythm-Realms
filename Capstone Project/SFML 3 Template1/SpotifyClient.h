@@ -18,9 +18,10 @@ public:
         std::string trackName;
         std::string artistName;
         std::string albumName;
-        int durationMs;
-        int progressMs;
-        bool isPlaying;
+        float bpm = 0.f;
+        int durationMs = 0;
+        int progressMs = 0;
+        bool isPlaying = false;
     };
 
     SpotifyClient();

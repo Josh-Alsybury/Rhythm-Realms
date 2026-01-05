@@ -2,14 +2,30 @@ const http = require('http');
 const url = require('url');
 const https = require('https');
 const querystring = require('querystring');
+const fs = require('fs');
 
 const CLIENT_ID = '28e081af3dfc453296f07c23ffe6d88f';
 const CLIENT_SECRET = '4cae7109583c4f728ad63f6262133403';
 const REDIRECT_URI = 'http://127.0.0.1:8888/callback';
+const RAPIDAPI_KEY = 'f2d68e0833msh84f1270c3c1c05ap1a9a24jsnc36f89e6cb90';
 
-let tokens = {}; // simple in-memory token storage
+let tokens = {};
 let lastTrackId = null;
 let currentBPM = 120;
+
+// Load cached BPMs from file (if exists)
+let bpmCache = {};
+try {
+  bpmCache = JSON.parse(fs.readFileSync('bpm_cache.json', 'utf8'));
+  console.log(`📦 Loaded ${Object.keys(bpmCache).length} cached BPMs from previous sessions`);
+} catch (err) {
+  console.log('📦 Starting with empty BPM cache');
+}
+
+// Save cache to file
+function saveBPMCache() {
+  fs.writeFileSync('bpm_cache.json', JSON.stringify(bpmCache, null, 2));
+}
 
 // Exchange authorization code for tokens
 function exchangeCodeForTokens(code) {
@@ -34,11 +50,7 @@ function exchangeCodeForTokens(code) {
 
   const req = https.request(options, (res) => {
     let body = '';
-
-    res.on('data', (chunk) => {
-      body += chunk;
-    });
-
+    res.on('data', (chunk) => { body += chunk; });
     res.on('end', () => {
       try {
         const parsed = JSON.parse(body);
@@ -47,7 +59,7 @@ function exchangeCodeForTokens(code) {
         } else {
           tokens.access_token = parsed.access_token;
           tokens.refresh_token = parsed.refresh_token;
-          console.log('Tokens received and stored:', tokens);
+          console.log('✅ Tokens received');
         }
       } catch (err) {
         console.error('Error parsing token response', err);
@@ -55,182 +67,126 @@ function exchangeCodeForTokens(code) {
     });
   });
 
-  req.on('error', (e) => {
-    console.error('Request error:', e);
-  });
-
+  req.on('error', (e) => console.error('Request error:', e));
   req.write(postData);
   req.end();
 }
 
 // Fetch currently playing track
-// Fetch currently playing track
 function getCurrentlyPlaying(callback) {
   if (!tokens.access_token) {
-    console.log('❌ No access token available');
-    callback({ error: 'No access token yet.' });
+    callback({ error: 'No access token yet.', bpm: currentBPM });
     return;
   }
-
-  console.log('📡 Polling Spotify API...');
 
   const options = {
     hostname: 'api.spotify.com',
     path: '/v1/me/player/currently-playing',
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${tokens.access_token}`,
-    },
-  };
-
-const req = https.request(options, (res) => {
-  console.log(`🔍 Spotify API Response Status: ${res.statusCode}`);
-
-  if (res.statusCode === 401) {
-    refreshAccessToken();
-    callback({ error: 'Token refreshing' });
-    return;
-  }
-
-  if (res.statusCode === 204) {
-    callback({ playing: false, bpm: currentBPM });
-    return;
-  }
-
-  let data = '';
-  res.on('data', (chunk) => data += chunk);
-
-  res.on('end', () => {
-    if (!data) {
-      callback({ playing: false, bpm: currentBPM });
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(data);
-
-      // ✅ LOCAL TRACK CHECK — CORRECT LOCATION
-      if (parsed?.item?.is_local) {
-        console.log('⚠ Local track — BPM unavailable');
-        callback({
-          playing: parsed?.is_playing ?? false,
-          bpm: currentBPM
-        });
-        return;
-      }
-
-      const trackId = parsed?.item?.id;
-      const trackName = parsed?.item?.name;
-      const artistName = parsed?.item?.artists?.[0]?.name;
-
-      if (trackId && trackId !== lastTrackId) {
-        lastTrackId = trackId;
-        fetchTrackBPM(trackId);
-      }
-
-      callback({
-        track: trackName,
-        artist: artistName,
-        bpm: currentBPM,
-        playing: parsed?.is_playing
-      });
-
-    } catch (err) {
-      callback({ error: err.message, bpm: currentBPM });
-    }
-  });
-});
-
-  req.on('error', (e) => {
-    console.error('❌ Request error:', e.message);
-    callback({ error: e.message, bpm: currentBPM });
-  });
-  
-  req.end();
-}
-
-function fetchTrackBPM(trackId) {
-  console.log(`🎼 Fetching BPM for track: ${trackId}`);
-
-  const options = {
-    hostname: 'api.spotify.com',
-    path: `/v1/audio-features/${trackId}`,
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${tokens.access_token}`,
-    },
+    headers: { 'Authorization': `Bearer ${tokens.access_token}` },
   };
 
   const req = https.request(options, (res) => {
-    console.log(`🔍 Audio Features Status: ${res.statusCode}`);
-
-    if (res.statusCode === 403) {
-      console.log('🚫 BPM unavailable for this track (Spotify restriction)');
+    if (res.statusCode === 204) {
+      callback({ playing: false, bpm: currentBPM });
       return;
     }
 
     let data = '';
     res.on('data', (chunk) => data += chunk);
     res.on('end', () => {
+      if (!data) {
+        callback({ playing: false, bpm: currentBPM });
+        return;
+      }
+
       try {
         const parsed = JSON.parse(data);
-        if (parsed.tempo) {
-          currentBPM = parsed.tempo;
-          console.log(`✅ BPM updated: ${currentBPM}`);
+        const trackId = parsed?.item?.id;
+        const trackName = parsed?.item?.name;
+        const artistName = parsed?.item?.artists?.[0]?.name;
+
+        // If track changed, check cache first, then fetch if needed
+        if (trackId && trackId !== lastTrackId) {
+          lastTrackId = trackId;
+          console.log(`🔄 Track changed: ${trackName} by ${artistName}`);
+          
+          // Check cache first!
+          if (bpmCache[trackId]) {
+            currentBPM = bpmCache[trackId];
+            console.log(`📦 Using cached BPM: ${currentBPM} (saved 1 API call!)`);
+          } else {
+            fetchBPMFromRapidAPI(trackId);
+          }
         }
+
+        callback({
+          track: trackName,
+          artist: artistName,
+          bpm: currentBPM,
+          playing: parsed?.is_playing
+        });
       } catch (err) {
-        console.error('❌ BPM parse error:', err);
+        callback({ error: err.message, bpm: currentBPM });
       }
     });
   });
 
-  req.on('error', (e) => console.error('❌ BPM request error:', e));
+  req.on('error', (e) => callback({ error: e.message, bpm: currentBPM }));
   req.end();
 }
 
-function refreshAccessToken() {
-  if (!tokens.refresh_token) return;
-
-  const postData = querystring.stringify({
-    grant_type: 'refresh_token',
-    refresh_token: tokens.refresh_token,
-  });
-
-  const authString = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+// Fetch BPM from RapidAPI using Spotify track ID
+function fetchBPMFromRapidAPI(spotifyTrackId) {
+  console.log(`🎼 Fetching BPM from RapidAPI for track: ${spotifyTrackId}`);
 
   const options = {
-    hostname: 'accounts.spotify.com',
-    path: '/api/token',
-    method: 'POST',
+    hostname: 'track-analysis.p.rapidapi.com',
+    path: `/pktx/spotify/${spotifyTrackId}`,
+    method: 'GET',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${authString}`,
-      'Content-Length': Buffer.byteLength(postData),
-    },
+      'x-rapidapi-key': RAPIDAPI_KEY,
+      'x-rapidapi-host': 'track-analysis.p.rapidapi.com'
+    }
   };
 
   const req = https.request(options, (res) => {
-    let body = '';
-    res.on('data', (chunk) => body += chunk);
+    console.log(`📊 RapidAPI Response Status: ${res.statusCode}`);
+
+    let data = '';
+    res.on('data', (chunk) => data += chunk);
     res.on('end', () => {
-      const parsed = JSON.parse(body);
-      if (parsed.access_token) {
-        tokens.access_token = parsed.access_token;
-        console.log('🔄 Access token refreshed');
+      try {
+        const parsed = JSON.parse(data);
+        
+        if (res.statusCode === 429) {
+          console.log('⚠ Rate limit hit - keeping last BPM:', currentBPM);
+          return;
+        }
+        
+        if (parsed.tempo) {
+          currentBPM = parsed.tempo;
+          bpmCache[spotifyTrackId] = currentBPM;  // Cache it!
+          saveBPMCache();  // Save to file for next time
+          console.log(`✅ BPM updated: ${currentBPM} (cached for future use)`);
+        } else {
+          console.log('⚠ No tempo in response:', parsed);
+        }
+      } catch (err) {
+        console.error('❌ Error parsing RapidAPI response:', err);
       }
     });
   });
 
-  req.write(postData);
+  req.on('error', (e) => console.error('❌ RapidAPI request error:', e));
   req.end();
 }
 
 const { exec } = require('child_process');
 
 function openLogin() {
-  const scopes = 'user-read-playback-state user-read-currently-playing'
-  const authURL =
-    'https://accounts.spotify.com/authorize?' +
+  const scopes = 'user-read-playback-state user-read-currently-playing';
+  const authURL = 'https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
       client_id: CLIENT_ID,
@@ -241,26 +197,21 @@ function openLogin() {
   exec(`start "" "${authURL}"`);
 }
 
-
-
-// Basic HTTP server
+// HTTP server
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
 
-  // handle OAuth callback
   if (parsedUrl.pathname === '/callback') {
     const code = parsedUrl.query.code;
-    console.log('Incoming path:', parsedUrl.pathname);// this simple log statement fixed the damn issue of nothing appearing at http://127.0.0.1:8888/current
     if (code) {
       exchangeCodeForTokens(code);
       res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('Authorization successful! Tokens being fetched...');
+      res.end('✅ Authorization successful!');
     } else {
       res.writeHead(400, { 'Content-Type': 'text/plain' });
-      res.end('No authorization code found.');
+      res.end('❌ No authorization code');
     }
 
-  // handle "currently playing" route
   } else if (parsedUrl.pathname === '/current') {
     getCurrentlyPlaying((data) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -274,6 +225,6 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(8888, '127.0.0.1', () => {
-  console.log('Server running at http://127.0.0.1:8888/');
+  console.log('🎵 Server running at http://127.0.0.1:8888/');
   openLogin();
 });

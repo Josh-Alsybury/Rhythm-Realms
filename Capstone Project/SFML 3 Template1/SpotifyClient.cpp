@@ -138,7 +138,7 @@ void SpotifyClient::ParseTrackData(const std::string& jsonResponse)
         return;
     }
 
-    m_currentTrack.isPlaying = (jsonResponse.find("\"is_playing\":true") != std::string::npos);
+    m_currentTrack.isPlaying = (jsonResponse.find("\"playing\":true") != std::string::npos);
 
     // Extract track name
     size_t namePos = jsonResponse.find("\"name\":");
@@ -149,6 +149,19 @@ void SpotifyClient::ParseTrackData(const std::string& jsonResponse)
         m_currentTrack.trackName = jsonResponse.substr(start, end - start);
     }
 
-    std::cout << "Current track: " << m_currentTrack.trackName
-        << " (Playing: " << m_currentTrack.isPlaying << ")" << std::endl;
+    size_t bpmPos = jsonResponse.find("\"bpm\":");
+    if (bpmPos != std::string::npos)
+    {
+        size_t start = bpmPos + 6;
+        size_t end = jsonResponse.find_first_of(",}", start);
+        m_currentTrack.bpm = std::stof(jsonResponse.substr(start, end - start));
+    }
+
+    static std::string lastTrack;
+    if (m_currentTrack.trackName != lastTrack)
+    {
+        std::cout << "Current track: " << m_currentTrack.trackName
+            << " (BPM: " << m_currentTrack.bpm << ")\n";
+        lastTrack = m_currentTrack.trackName;
+    }
 }

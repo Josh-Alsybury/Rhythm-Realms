@@ -116,9 +116,9 @@ void Game::processEvents()
 
 							// Start Spotify API for track info
 							std::cout << "Starting Spotify server..." << std::endl;
-#ifdef _WIN32
+							#ifdef _WIN32
 							system("start cmd /k \"..\\..\\Spotify test\\start_spotify_server.bat\"");
-#endif
+							#endif
 							std::this_thread::sleep_for(std::chrono::seconds(3));
 							m_spotifyClient.StartPolling();
 
@@ -164,6 +164,22 @@ void Game::initializeGame()
 		"ASSETS/CHUNKS/Chunk3(Forest).tmj",
 		"ASSETS/CHUNKS/Chunk4(Forest).tmj"
 	};
+
+	m_bpmText.setFont(m_jerseyFont);
+	m_bpmText.setCharacterSize(32);
+	m_bpmText.setFillColor(sf::Color::White);
+	m_bpmText.setPosition(sf::Vector2f(50.f, 50.f));
+	m_bpmText.setString("BPM: 0");
+
+	// Audio setup
+	if (!m_useSpotify)
+	{
+		setupAudio(); // local BPM stream
+	}
+	else
+	{
+		std::cout << "Using Spotify BPM source" << std::endl;
+	}
 
 	// Player setup
 	m_Player.pos.x = m_window.getSize().x / 2.f;
@@ -274,6 +290,7 @@ void Game::update(sf::Time t_deltaTime)
 	if (m_useSpotify)
 	{
 		auto trackInfo = m_spotifyClient.GetCurrentTrack();
+		rawBPM = trackInfo.bpm;
 	}
 	else
 	{
@@ -304,7 +321,15 @@ void Game::update(sf::Time t_deltaTime)
 			m_currentTheme = "Forest";
 		}
 	}
-	m_bpmText.setString("Live BPM: " + std::to_string(static_cast<int>(m_currentBPM)));
+
+	if (m_useSpotify)
+	{
+		m_bpmText.setString("Track Tempo: " + std::to_string((int)m_currentBPM));
+	}
+	else
+	{
+		m_bpmText.setString("Live BPM: " + std::to_string((int)m_currentBPM));
+	}
 
 	if (!m_showSkillTree)
 	{
@@ -618,13 +643,9 @@ void Game::setupAudio()
 	}
 
 	std::cout << "Audio loaded successfully, starting playback..." << std::endl;
-	m_bpmStream.setVolume(0.0f);
+	m_bpmStream.setVolume(50.0f); // You had it at 0, probably want to hear it!
 	m_bpmStream.play();
 
-	m_bpmText.setCharacterSize(32);
-	m_bpmText.setFillColor(sf::Color::White);
-	m_bpmText.setPosition(sf::Vector2f(50.f, 50.f));
-	m_bpmText.setString("Live BPM: 0.0");
 }
 
 
