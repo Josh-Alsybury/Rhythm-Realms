@@ -31,6 +31,7 @@
 #include "SpotifyClient.h"
 #include "EnemySpawnManager.h"
 #include "Debug.h"
+#include "EnemyCollision.h"
 
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour

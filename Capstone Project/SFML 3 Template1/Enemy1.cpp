@@ -2,23 +2,33 @@
 #include <iostream>
 
 Enemy1::Enemy1()
+    : pos{ 1200.f, 750.f }
+    , velocity{ 0.f, 0.f }
+    , health(MAX_HEALTH)
+    , state(EnemyState::Idle)
+    , facingRight(false)
+    , m_frameCount(0.f)
+    , m_frameNow(0)
+    , m_framePlus(0.2f)
+    , speed(70.f)
+    , attackCooldown(0.f)
+    , attackCooldownTime(1.0f)
+    , canDamagePlayer(false)
+    , hasDealtDamage(false)
+    , attackHitboxRadius(50.f)
+    , currentAnimType(AnimationType::Idle)
 {
-    pos = { 1200.f, 750.f };
-    velocity = { 0.f, 0.f };
-
-    // Zero-initialize ALL animation structures (this sets everything to 0/nullptr)
+    // Zero-initialize ALL animation structures
     idleAnim = {};
     runAnim = {};
     attackAnim = {};
     defendAnim = {};
 
-    // Explicitly set texture pointers to nullptr for clarity
+    // Explicitly set texture pointers to nullptr
     idleAnim.texture = nullptr;
     runAnim.texture = nullptr;
     attackAnim.texture = nullptr;
     defendAnim.texture = nullptr;
-
-    currentAnim = nullptr;
 
     std::cout << "Constructor - Enemy pos: " << pos.x << ", " << pos.y << std::endl;
 }
@@ -35,35 +45,35 @@ void Enemy1::Reset()
     m_frameNow = 0;
     m_frameCount = 0.f;
 
-    currentAnim = &idleAnim;
+    // Reset to idle animation
+    currentAnimType = AnimationType::Idle;
     sprite->setTexture(*idleAnim.texture, false);
     sprite->setTextureRect({ {0, 0}, {96, 64} });
 
     UpdateHealthBar();
 }
 
-
 void Enemy1::SetupEnemy1()
 {
     // Setup animations with CORRECT frame widths
     idleAnim.texture = &g_samuraiTextures.idle;
     idleAnim.frameCount = 5;
-    idleAnim.frameWidth = 96;   // Changed from 48
+    idleAnim.frameWidth = 96;
     idleAnim.frameHeight = 64;
 
     runAnim.texture = &g_samuraiTextures.run;
-    runAnim.frameCount = 7;     // Changed from 8
-    runAnim.frameWidth = 96;    // Changed from 84
+    runAnim.frameCount = 7;
+    runAnim.frameWidth = 96;
     runAnim.frameHeight = 64;
 
     attackAnim.texture = &g_samuraiTextures.attack;
-    attackAnim.frameCount = 5;  // Changed from 6
-    attackAnim.frameWidth = 96; // Changed from 80
+    attackAnim.frameCount = 5;
+    attackAnim.frameWidth = 96;
     attackAnim.frameHeight = 64;
 
     defendAnim.texture = &g_samuraiTextures.defend;
     defendAnim.frameCount = 6;
-    defendAnim.frameWidth = 96; // Keep at 96
+    defendAnim.frameWidth = 96;
     defendAnim.frameHeight = 64;
 
     // Create sprite with correct initial frame
@@ -71,28 +81,46 @@ void Enemy1::SetupEnemy1()
     sprite->setScale(sf::Vector2f(2.2f, 2.2f));
     sprite->setPosition(pos);
     sprite->setTextureRect(sf::IntRect({ 0, 0 }, { 96, 64 }));
-    sprite->setOrigin(sf::Vector2f(48.f,40.0f)); // Bottom-center of 48x64 frame
+    sprite->setOrigin(sf::Vector2f(48.f, 30.f));
 
-    currentAnim = &idleAnim;
+    currentAnimType = AnimationType::Idle;
 
-    // --- Detection Circles (for debug/visual aid) ---
+    // Detection/Attack circles
     detectionRadius.setRadius(detectionRange);
     detectionRadius.setOrigin(sf::Vector2f(detectionRange, detectionRange));
-    detectionRadius.setFillColor(sf::Color(255, 255, 0, 40));  // translucent yellow
+    detectionRadius.setFillColor(sf::Color(255, 255, 0, 40));
 
     attackRadius.setRadius(attackRange);
     attackRadius.setOrigin(sf::Vector2f(attackRange, attackRange));
-    attackRadius.setFillColor(sf::Color(255, 0, 0, 60));  // translucent red
+    attackRadius.setFillColor(sf::Color(255, 0, 0, 60));
 
     attackHitbox.setRadius(attackHitboxRadius);
-    attackHitbox.setOrigin(sf::Vector2f(attackHitboxRadius, attackHitboxRadius));  // Add sf::Vector2f
+    attackHitbox.setOrigin(sf::Vector2f(attackHitboxRadius, attackHitboxRadius));
     attackHitbox.setFillColor(sf::Color(255, 0, 0, 80));
 
     UpdateHealthBar();
 }
 
+// HELPER: Get current animation by type (safe from vector reallocation)
+Enemy1::Animation* Enemy1::GetCurrentAnimation()
+{
+    switch (currentAnimType)
+    {
+    case AnimationType::Idle:      return &idleAnim;
+    case AnimationType::Running:   return &runAnim;
+    case AnimationType::Attacking: return &attackAnim;
+    case AnimationType::Defending: return &defendAnim;
+    default:                        return &idleAnim;
+    }
+}
+
 void Enemy1::Update(float dt, sf::Vector2f playerPos)
 {
+    // Get animation fresh every frame - safe from reallocation
+    Enemy1::Animation* anim = GetCurrentAnimation();
+
+    assert(sprite && anim && anim->texture);
+
     AIBehavior(playerPos, dt);
 
     pos += velocity * dt;
@@ -119,7 +147,7 @@ void Enemy1::Update(float dt, sf::Vector2f playerPos)
         hasDealtDamage = false;
         canDamagePlayer = false;
     }
-    // Only allow damage during attack animation frames 2-4 if haven't dealt damage yet
+    // Only allow damage during attack animation frames 2-4
     else if (m_frameNow >= 2 && m_frameNow <= 4 && !hasDealtDamage)
     {
         canDamagePlayer = true;
@@ -128,56 +156,45 @@ void Enemy1::Update(float dt, sf::Vector2f playerPos)
     {
         canDamagePlayer = false;
     }
-
 }
+
 void Enemy1::AnimateEnemy(float dt)
 {
-    // Enhanced safety checks
-    if (!currentAnim) {
-        std::cerr << "AnimateEnemy: currentAnim is null!" << std::endl;
-        return;
-    }
+    // Get animation fresh - safe from reallocation
+    Enemy1::Animation* anim = GetCurrentAnimation();
 
-    if (!currentAnim->texture) {
-        std::cerr << "AnimateEnemy: texture is null!" << std::endl;
+    if (!anim || !anim->texture || !sprite)
         return;
-    }
 
-    // Additional check: verify sprite exists
-    if (!sprite) {
-        std::cerr << "AnimateEnemy: sprite is null!" << std::endl;
+    if (anim->frameCount <= 0)
         return;
-    }
 
     m_frameCount += m_framePlus * dt * 60;
     if (m_frameCount >= 1.0f)
     {
-        m_frameNow = (m_frameNow + 1) % currentAnim->frameCount;
+        m_frameNow = (m_frameNow + 1) % anim->frameCount;
         m_frameCount = 0.0f;
     }
 
-    if (!currentAnim || !currentAnim->texture)
+    if (anim->frameWidth <= 0 || anim->frameHeight <= 0)
         return;
 
-    if (currentAnim->frameWidth <= 0 || currentAnim->frameHeight <= 0)
-        return;
-
-    // Get frame rect - ADD CLAMPING
-    int xPos = m_frameNow * currentAnim->frameWidth;
-    int textureWidth = currentAnim->texture->getSize().x;
+    // Get frame rect with clamping
+    int xPos = m_frameNow * anim->frameWidth;
+    int textureWidth = anim->texture->getSize().x;
 
     // Clamp to prevent reading outside texture
-    if (xPos + currentAnim->frameWidth > textureWidth)
-        xPos = textureWidth - currentAnim->frameWidth;
+    if (xPos + anim->frameWidth > textureWidth)
+        xPos = textureWidth - anim->frameWidth;
 
     sf::IntRect frameRect(
         sf::Vector2i(xPos, 0),
-        sf::Vector2i(currentAnim->frameWidth, currentAnim->frameHeight)
+        sf::Vector2i(anim->frameWidth, anim->frameHeight)
     );
     sprite->setTextureRect(frameRect);
 
     // Origin at BOTTOM-CENTER (feet position)
-    sprite->setOrigin(sf::Vector2f(currentAnim->frameWidth / 2.f, 40.f));
+    sprite->setOrigin(sf::Vector2f(anim->frameWidth / 2.f, 30.f));
 
     // Update scale and facing
     float scaleX = facingRight ? std::abs(sprite->getScale().x) : -std::abs(sprite->getScale().x);
@@ -193,30 +210,37 @@ void Enemy1::SetState(EnemyState newState)
     if (state == EnemyState::Attacking && newState != EnemyState::Attacking)
     {
         attackCooldown = attackCooldownTime;
-        hasDealtDamage = false;  // Reset damage flag
+        hasDealtDamage = false;
     }
 
     state = newState;
-    Animation* newAnim = nullptr;
+
+    // Update animation TYPE (not pointer!)
+    AnimationType newAnimType = AnimationType::Idle;
     switch (state)
     {
-    case EnemyState::Idle:      newAnim = &idleAnim;     break;
-    case EnemyState::Running:   newAnim = &runAnim;      break;
-    case EnemyState::Attacking: newAnim = &attackAnim;   break;
-    case EnemyState::Defending: newAnim = &defendAnim;   break;
+    case EnemyState::Idle:      newAnimType = AnimationType::Idle;      break;
+    case EnemyState::Running:   newAnimType = AnimationType::Running;   break;
+    case EnemyState::Attacking: newAnimType = AnimationType::Attacking; break;
+    case EnemyState::Defending: newAnimType = AnimationType::Defending; break;
     }
-    if (currentAnim != newAnim && newAnim != nullptr)
+
+    if (currentAnimType != newAnimType)
     {
-        currentAnim = newAnim;
-        sprite->setTexture(*currentAnim->texture, true);
+        currentAnimType = newAnimType;
         m_frameNow = 0;
         m_frameCount = 0.f;
 
-        sf::IntRect firstFrame(
-            sf::Vector2i(0, 0),
-            sf::Vector2i(currentAnim->frameWidth, currentAnim->frameHeight)
-        );
-        sprite->setTextureRect(firstFrame);
+        // Get the new animation and update sprite
+        Enemy1::Animation* newAnim = GetCurrentAnimation();
+        if (newAnim && newAnim->texture && newAnim->frameCount > 0)
+        {
+            sprite->setTexture(*newAnim->texture, true);
+            sprite->setTextureRect({
+                {0, 0},
+                {newAnim->frameWidth, newAnim->frameHeight}
+                });
+        }
     }
 }
 
@@ -237,10 +261,10 @@ void Enemy1::AIBehavior(sf::Vector2f playerPos, float dt)
         SetState(EnemyState::Attacking);
         velocity.x = 0.f;
     }
-    // --- COOLDOWN (stay in idle dont chase) ---
+    // --- COOLDOWN (stay in idle, don't chase) ---
     else if (distance <= attackRange && attackCooldown > 0.f)
     {
-        SetState(EnemyState::Idle);  
+        SetState(EnemyState::Idle);
         velocity.x = 0.f;
     }
     // --- CHASE ---
@@ -267,9 +291,9 @@ void Enemy1::UpdateHealthBar()
     for (int i = 0; i < health; ++i)
     {
         sf::RectangleShape bar;
-        bar.setSize({ 15.f, 15.f });  // Smaller than players
+        bar.setSize({ 15.f, 15.f });
         bar.setFillColor(sf::Color::Red);
-        bar.setPosition({ pos.x - 15.f + (i * 18.f), pos.y - 100.f });// Position above the enemy sprite
+        bar.setPosition({ pos.x - 15.f + (i * 18.f), pos.y - 100.f });
         healthBar.push_back(bar);
     }
 }

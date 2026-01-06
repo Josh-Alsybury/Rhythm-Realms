@@ -202,11 +202,7 @@ void Game::initializeGame()
 	m_archers.clear();
 	m_arrows.clear();
 
-	// Spawn 1 test archer
-	m_archers.emplace_back();
-	m_archers.back().SetupEnemy2();
-	m_archers.back().pos = { 1500.f, 746.f };
-	m_archers.back().sprite->setPosition(m_archers.back().pos);
+	m_enemySpawnManager.ForceSpawnArcher({ 1500.f, 746.f }, m_archers);
 
 	// Tileset
 	if (!m_tilesetTexture.loadFromFile(
@@ -314,20 +310,27 @@ void Game::update(sf::Time t_deltaTime)
 	static float smoothedBPM = 120.f;
 	smoothedBPM += (rawBPM - smoothedBPM) * 0.05f;
 	m_currentBPM = smoothedBPM;
+	float bpmForTheme = rawBPM;
 
-	if (m_currentBPM > 0.0)
+	if (bpmForTheme > 0.0)
 	{
-		if (m_currentBPM < 90.0 && m_currentTheme != "Medieval")
+		if (bpmForTheme > 150.0f && m_currentTheme != "Factory")
 		{
-			std::cout << "Transitioning to Medieval theme (BPM: " << m_currentBPM << ")" << std::endl;
-			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Background");
-			m_currentTheme = "Medieval";
+			std::cout << "Transitioning to Factory theme (BPM: " << m_currentBPM << ")\n";
+			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Factory/Background");
+			m_currentTheme = "Factory";
 		}
-		else if (m_currentBPM >= 90.0 && m_currentBPM <= 150.0 && m_currentTheme != "Forest")
+		else if (bpmForTheme >= 90.0f && bpmForTheme <= 150.0f && m_currentTheme != "Forest")
 		{
-			std::cout << "Transitioning to Forest theme (BPM: " << m_currentBPM << ")" << std::endl;
+			std::cout << "Transitioning to Forest theme (BPM: " << m_currentBPM << ")\n";
 			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
 			m_currentTheme = "Forest";
+		}
+		else if (bpmForTheme < 90.0f && m_currentTheme != "Medieval")
+		{
+			std::cout << "Transitioning to Medieval theme (BPM: " << bpmForTheme << ")\n";
+			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Background");
+			m_currentTheme = "Medieval";
 		}
 	}
 
@@ -459,21 +462,59 @@ void Game::update(sf::Time t_deltaTime)
 				rightmostChunkX = chunkRight;
 		}
 
-		// UPDATE SPAWN MANAGER (handles automatic spawning)
-		m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, rightmostChunkX);
+		m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, m_archers, rightmostChunkX, m_chunks);
 
-		// UPDATE ALL ENEMIES
+		// ========== UPDATE MELEE ENEMIES ==========
 		for (auto& enemy : m_enemies)
 		{
-			// Skip dead enemies (spawn manager will recycle them)
 			if (enemy.health <= 0) continue;
 
-			float dx = enemy.pos.x - m_Player.pos.x;
-			if (std::abs(dx) > 2000.f) continue;
+			// Store old position
+			sf::Vector2f oldPos = enemy.pos;
 
+			// Update enemy (AI + movement)
 			enemy.Update(dt, m_Player.pos);
+			// ledge coverage
+			bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
+				oldPos,  // Check from OLD position
+				enemy.facingRight,
+				m_chunks,
+				45.f
+			);
 
-			// Check player attacking enemy
+			if (wouldFallOffLedge && enemy.velocity.x != 0.f)
+			{
+				// SMART BEHAVIOR: Back away from ledge instead of stopping
+				enemy.pos.x = oldPos.x;
+
+				// Back up slowly (half speed)
+				float backupDir = enemy.facingRight ? -1.f : 1.f;
+				enemy.velocity.x = backupDir * enemy.speed * 0.5f;
+				enemy.pos.x += enemy.velocity.x * dt;
+
+			}
+
+			// Apply horizontal collision
+			EnemyCollision::CheckHorizontalCollision(
+				enemy.pos,
+				enemy.velocity,
+				m_chunks,
+				dt
+			);
+
+			// Snap to ground (prevents floating)
+			EnemyCollision::ApplyGravityAndGround(
+				enemy.pos,
+				enemy.velocity,  // Pass velocity so gravity can update it
+				m_chunks,
+				dt
+			);
+
+			// Update sprite position
+			if (enemy.sprite)
+				enemy.sprite->setPosition(enemy.pos);
+
+			// Player/enemy combat (your existing code)
 			if (m_Player.canDamageEnemy)
 			{
 				float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
@@ -493,7 +534,6 @@ void Game::update(sf::Time t_deltaTime)
 				}
 			}
 
-			// Check enemy attacking player
 			if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
 			{
 				float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
@@ -504,14 +544,11 @@ void Game::update(sf::Time t_deltaTime)
 				{
 					std::cout << "Attack blocked!" << std::endl;
 					float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
-
 					m_Player.velocity.x = knockbackDirection * 200.f;
 					if (m_Player.isOnGround)
 						m_Player.velocity.y = -10.f;
-
 					m_Player.isKnockedBack = true;
 					m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
-
 					enemy.hasDealtDamage = true;
 					enemy.canDamagePlayer = false;
 				}
@@ -523,93 +560,135 @@ void Game::update(sf::Time t_deltaTime)
 					std::cout << "Player hit! Health: " << m_Player.health << std::endl;
 				}
 			}
-			for (auto& archer : m_archers)
-			{
-				// Skip dead archers
-				if (archer.health <= 0) continue;
+		}
 
-				float dx = archer.pos.x - m_Player.pos.x;
-				if (std::abs(dx) > 2000.f) continue;
+		// ========== UPDATE ARCHERS WITH COLLISION ==========
+		for (auto& archer : m_archers)
+		{
+			if (archer.health <= 0) continue;
 
-				archer.Update(dt, m_Player.pos);
+			// Store old position
+			sf::Vector2f oldPos = archer.pos;
 
-				// Check if archer is shooting (specific attack frames)
-				if (archer.state == Enemy2::EnemyState::Attacking
-					&& archer.canDamagePlayer
-					&& !archer.hasDealtDamage)
-				{
-					// Spawn arrow!
-					sf::Vector2f arrowStart = archer.pos;
-					arrowStart.x += archer.facingRight ? 40.f : -40.f;  // Offset from archer
-					m_arrows.emplace_back(arrowStart, archer.facingRight);
-
-					archer.hasDealtDamage = true;  // Only shoot one arrow per attack
-					std::cout << "Archer shot arrow!" << std::endl;
-				}
-
-				// Player attacking archer
-				if (m_Player.canDamageEnemy)
-				{
-					float dx = m_Player.attackHitbox.getPosition().x - archer.pos.x;
-					float dy = m_Player.attackHitbox.getPosition().y - archer.pos.y;
-					float distance = std::sqrt(dx * dx + dy * dy);
-
-					if (distance < m_Player.attackHitboxRadius + 30.f)
-					{
-						archer.TakeDamage(1);
-						m_Player.canDamageEnemy = false;
-
-						if (archer.health <= 0)
-						{
-							std::cout << "Archer defeated!" << std::endl;
-							m_skillTree.AddSkillPoint();
-						}
-					}
-				}
-			}
-
-			for (auto& arrow : m_arrows)
-			{
-				if (!arrow.active) continue;
-
-				arrow.Update(dt);
-
-				// Check if arrow hit player (SFML 3.0 syntax)
-				sf::FloatRect arrowBounds = arrow.getBounds();
-				sf::FloatRect playerBounds(
-					{ m_Player.pos.x - 15.f, m_Player.pos.y - 20.f },  // position
-					{ 30.f, 40.f }                                      // size
-				);
-
-				if (arrowBounds.findIntersection(playerBounds).has_value())
-				{
-					if (m_Player.canBlockEnemy)
-					{
-						std::cout << "Arrow blocked!" << std::endl;
-						arrow.active = false;
-					}
-					else
-					{
-						m_Player.TakeDamage(1);
-						arrow.active = false;
-						std::cout << "Arrow hit player! Health: " << m_Player.health << std::endl;
-					}
-				}
-
-				// Remove arrows that are off-screen
-				if (arrow.IsOffScreen(m_cameraOffset.x, m_window.getSize().x))
-				{
-					arrow.active = false;
-				}
-			}
-			// Clean up inactive arrows
-			m_arrows.erase(
-				std::remove_if(m_arrows.begin(), m_arrows.end(),
-					[](const Arrow& arrow) { return !arrow.active; }),
-				m_arrows.end()
+			// Update archer (AI + movement)
+			archer.Update(dt, m_Player.pos);
+			// ledge coverage 
+			bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
+				oldPos,
+				archer.facingRight,
+				m_chunks,
+				45.f
 			);
 
+			if (wouldFallOffLedge && archer.velocity.x != 0.f)
+			{
+				// ARCHERS: Back away from ledge (they prefer range anyway!)
+				archer.pos.x = oldPos.x;
+
+				// Back up to maintain distance
+				float backupDir = archer.facingRight ? -1.f : 1.f;
+				archer.velocity.x = backupDir * archer.speed * 0.3f;
+				archer.pos.x += archer.velocity.x * dt;
+			}
+
+
+			// Apply horizontal collision
+			EnemyCollision::CheckHorizontalCollision(
+				archer.pos,
+				archer.velocity,
+				m_chunks,
+				dt
+			);
+
+			// Snap to ground
+			EnemyCollision::ApplyGravityAndGround(
+				archer.pos,
+				archer.velocity,  // Pass velocity so gravity can update it
+				m_chunks,
+				dt
+			);
+
+			// Update sprite position
+			if (archer.sprite)
+				archer.sprite->setPosition(archer.pos);
+
+			// Arrow spawning (your existing code)
+			if (archer.state == Enemy2::ArcherState::Attacking
+				&& archer.canDamagePlayer
+				&& !archer.hasDealtDamage)
+			{
+				sf::Vector2f arrowStart = archer.pos;
+				arrowStart.x += archer.facingRight ? 40.f : -40.f;
+				m_arrows.emplace_back(arrowStart, archer.facingRight);
+				archer.hasDealtDamage = true;
+				std::cout << "Archer shot arrow!" << std::endl;
+			}
+
+			// Player attacking archer (your existing code)
+			if (m_Player.canDamageEnemy)
+			{
+				float dx = m_Player.attackHitbox.getPosition().x - archer.pos.x;
+				float dy = m_Player.attackHitbox.getPosition().y - archer.pos.y;
+				float distance = std::sqrt(dx * dx + dy * dy);
+
+				if (distance < m_Player.attackHitboxRadius + 30.f)
+				{
+					archer.TakeDamage(1);
+					m_Player.canDamageEnemy = false;
+
+					if (archer.health <= 0)
+					{
+						std::cout << "Archer defeated!" << std::endl;
+						m_skillTree.AddSkillPoint();
+					}
+				}
+			}
 		}
+
+
+		// ========== UPDATE ARROWS (SEPARATE LOOP!) ==========
+		for (auto& arrow : m_arrows)
+		{
+			if (!arrow.active) continue;
+
+			arrow.Update(dt);
+
+			// Check if arrow hit player
+			sf::FloatRect arrowBounds = arrow.getBounds();
+			sf::FloatRect playerBounds(
+				{ m_Player.pos.x - 15.f, m_Player.pos.y - 20.f },
+				{ 30.f, 40.f }
+			);
+
+			if (arrowBounds.findIntersection(playerBounds).has_value())
+			{
+				if (m_Player.canBlockEnemy)
+				{
+					std::cout << "Arrow blocked!" << std::endl;
+					arrow.active = false;
+				}
+				else
+				{
+					m_Player.TakeDamage(1);
+					arrow.active = false;
+					std::cout << "Arrow hit player! Health: " << m_Player.health << std::endl;
+				}
+			}
+
+			// Remove arrows that are off-screen
+			if (arrow.IsOffScreen(m_cameraOffset.x, m_window.getSize().x))
+			{
+				arrow.active = false;
+			}
+		}
+
+		// Clean up inactive arrows
+		m_arrows.erase(
+			std::remove_if(m_arrows.begin(), m_arrows.end(),
+				[](const Arrow& arrow) { return !arrow.active; }),
+			m_arrows.end()
+		);
+
 	}
 
 }
@@ -652,7 +731,6 @@ void Game::render()
 		m_Player.sprite->setPosition(renderPos);
 
 		m_dynamicBackground.render(m_window);
-
 		for (auto& chunk : m_chunks)
 		{
 			chunk.draw(m_window, m_cameraOffset);
@@ -662,7 +740,7 @@ void Game::render()
 		{
 			Debug::DrawChunkCollision(m_window, m_chunks, m_cameraOffset);
 			Debug::DrawPlayerCollision(m_window, m_Player, m_cameraOffset, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT);
-			Debug::DrawEnemyCollision(m_window, m_enemies, m_cameraOffset);
+			Debug::DrawAllEnemiesCollision(m_window, m_enemies, m_archers, m_cameraOffset);
 		}
 
 		for (auto& enemy : m_enemies)

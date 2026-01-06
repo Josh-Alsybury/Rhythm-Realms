@@ -1,17 +1,23 @@
 #include "EnemySpawnManager.h"
 #include <iostream>
 #include <cmath>
+#include "Chunk.h"
+#include "EnemyCollision.h"
 
 EnemySpawnManager::EnemySpawnManager()
     : spawnCooldownTimer(0.f)
+    , archerSpawnCooldownTimer(0.f)
     , difficultyMultiplier(1.0f)
     , totalEnemiesSpawned(0)
+    , totalArchersSpawned(0)
     , activeEnemyCount(0)
+    , activeArcherCount(0)
     , rng(std::random_device{}())
     , distanceDistribution(800.f, 1200.f)
     , heightVariation(-20.f, 20.f)
 {
-    config = EnemySpawnConfig(); // Use default values
+    config = EnemySpawnConfig(); // Default for melee enemies
+    archerConfig = EnemySpawnConfig(900.f, 1500.f, 5.0f, 2); // Archers spawn further, less frequently
 }
 
 void EnemySpawnManager::SetSpawnConfig(const EnemySpawnConfig& newConfig)
@@ -26,21 +32,23 @@ void EnemySpawnManager::SetSpawnConfig(const EnemySpawnConfig& newConfig)
 
 void EnemySpawnManager::SetDifficultyMultiplier(float multiplier)
 {
-    difficultyMultiplier = std::max(0.5f, std::min(multiplier, 3.0f)); // Clamp between 0.5x and 3x
+    difficultyMultiplier = std::max(0.5f, std::min(multiplier, 3.0f));
 }
 
 void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
-    std::vector<Enemy1>& enemies, float rightmostChunkX)
+    std::vector<Enemy1>& enemies, std::vector<Enemy2>& archers,
+    float rightmostChunkX, const std::vector<Chunk>& chunks)  // ADDED CHUNKS PARAMETER
 {
-    // Update cooldown
+    // Update cooldowns
     spawnCooldownTimer -= dt;
+    archerSpawnCooldownTimer -= dt;
 
     // Clean up old spawn records
     static float timeSinceStart = 0.f;
     timeSinceStart += dt;
     CleanupOldSpawnRecords(timeSinceStart);
 
-    // Count active enemies (alive ones)
+    // Count active enemies
     activeEnemyCount = 0;
     for (const auto& enemy : enemies) {
         if (enemy.health > 0) {
@@ -48,96 +56,155 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
         }
     }
 
-    // Check if we should spawn
-    bool shouldSpawn = spawnCooldownTimer <= 0.f
+    activeArcherCount = 0;
+    for (const auto& archer : archers) {
+        if (archer.health > 0) {
+            activeArcherCount++;
+        }
+    }
+
+    // ========== MELEE ENEMY SPAWNING ==========
+    bool shouldSpawnMelee = spawnCooldownTimer <= 0.f
         && activeEnemyCount < config.maxActiveEnemies;
 
-    if (shouldSpawn)
+    if (shouldSpawnMelee)
     {
-        // Get random spawn position ahead of player
         float spawnX = GetRandomSpawnX(playerPos, rightmostChunkX);
 
-        // Check if position is valid (not too close to recent spawns)
         if (CanSpawnAt(spawnX))
         {
-            // Find a dead/recyclable enemy slot
             bool spawned = false;
             for (auto& enemy : enemies)
             {
                 if (enemy.health <= 0)
                 {
-                    // Recycle this enemy
-                    float spawnY = GetSpawnY();
+                    float spawnY = GetSpawnY(spawnX, chunks);  // FIXED: Added both parameters
 
-                    // Use Reset() method to properly reinitialize
-                    enemy.Reset();
                     enemy.SetupEnemy1();
-
-                    // Set new position
+                    enemy.Reset();
                     enemy.pos = { spawnX, spawnY };
                     enemy.sprite->setPosition(enemy.pos);
 
-                    // Record spawn
                     recentSpawns.emplace_back(spawnX, timeSinceStart);
                     totalEnemiesSpawned++;
                     spawned = true;
 
-                    std::cout << "Recycled enemy at X: " << spawnX << " (Total: "
-                        << totalEnemiesSpawned << ")" << std::endl;
+                    std::cout << "Recycled melee enemy at X: " << spawnX << std::endl;
                     break;
                 }
             }
 
-            // If no recyclable slot found and we have room, create new enemy
             if (!spawned && enemies.size() < static_cast<size_t>(config.maxActiveEnemies))
             {
                 enemies.emplace_back();
                 auto& newEnemy = enemies.back();
                 newEnemy.SetupEnemy1();
 
-                float spawnY = GetSpawnY();
+                float spawnY = GetSpawnY(spawnX, chunks);  // FIXED: Added both parameters
                 newEnemy.pos = { spawnX, spawnY };
                 newEnemy.sprite->setPosition(newEnemy.pos);
 
-                // Record spawn
                 recentSpawns.emplace_back(spawnX, timeSinceStart);
                 totalEnemiesSpawned++;
 
-                std::cout << "Created new enemy at X: " << spawnX << " (Total: "
-                    << totalEnemiesSpawned << ")" << std::endl;
+                std::cout << "Created new melee enemy at X: " << spawnX << std::endl;
             }
 
-            // Reset cooldown (affected by difficulty)
             float adjustedCooldown = config.spawnCooldown / difficultyMultiplier;
             spawnCooldownTimer = adjustedCooldown;
         }
         else
         {
-            // Try again in a short time if position was invalid
             spawnCooldownTimer = 0.5f;
+        }
+    }
+
+    // ========== ARCHER SPAWNING ==========
+    bool shouldSpawnArcher = archerSpawnCooldownTimer <= 0.f
+        && activeArcherCount < archerConfig.maxActiveEnemies;
+
+    if (shouldSpawnArcher)
+    {
+        // Use archer's longer spawn distance
+        std::uniform_real_distribution<float> archerDistDist(
+            archerConfig.minSpawnDistance, archerConfig.maxSpawnDistance
+        );
+
+        float archerSpawnDistance = archerDistDist(rng);
+        float archerSpawnX = playerPos.x + archerSpawnDistance;
+
+        // Clamp to chunk bounds
+        float maxSpawnX = rightmostChunkX - 200.f;
+        if (archerSpawnX > maxSpawnX)
+            archerSpawnX = maxSpawnX;
+
+        if (CanSpawnAt(archerSpawnX))
+        {
+            bool spawned = false;
+            for (auto& archer : archers)
+            {
+                if (archer.health <= 0)
+                {
+                    float spawnY = GetSpawnY(archerSpawnX, chunks);  // FIXED: Added both parameters
+
+                    archer.SetupEnemy2();
+                    archer.Reset();
+                    archer.pos = { archerSpawnX, spawnY };
+                    archer.sprite->setPosition(archer.pos);
+
+                    recentSpawns.emplace_back(archerSpawnX, timeSinceStart);
+                    totalArchersSpawned++;
+                    spawned = true;
+
+                    std::cout << "Recycled archer at X: " << archerSpawnX << std::endl;
+                    break;
+                }
+            }
+
+            if (!spawned && archers.size() < static_cast<size_t>(archerConfig.maxActiveEnemies))
+            {
+                archers.emplace_back();
+                auto& newArcher = archers.back();
+                newArcher.SetupEnemy2();
+                newArcher.Reset();
+
+                float spawnY = GetSpawnY(archerSpawnX, chunks);  // FIXED: Added both parameters
+                newArcher.pos = { archerSpawnX, spawnY };
+                newArcher.sprite->setPosition(newArcher.pos);
+
+                recentSpawns.emplace_back(archerSpawnX, timeSinceStart);
+                totalArchersSpawned++;
+
+                std::cout << "Created new archer at X: " << archerSpawnX << std::endl;
+            }
+
+            float adjustedCooldown = archerConfig.spawnCooldown / difficultyMultiplier;
+            archerSpawnCooldownTimer = adjustedCooldown;
+        }
+        else
+        {
+            archerSpawnCooldownTimer = 0.5f;
         }
     }
 }
 
 void EnemySpawnManager::ForceSpawn(sf::Vector2f position, std::vector<Enemy1>& enemies)
 {
-    // Find dead enemy to recycle or create new one
     for (auto& enemy : enemies)
     {
         if (enemy.health <= 0)
         {
+            enemy.SetupEnemy1();
             enemy.Reset();
             enemy.pos = position;
             enemy.sprite->setPosition(enemy.pos);
-            enemy.SetupEnemy1();
 
             totalEnemiesSpawned++;
-            std::cout << "Force spawned enemy at (" << position.x << ", " << position.y << ")" << std::endl;
+            std::cout << "Force spawned melee enemy at (" << position.x << ", " << position.y << ")" << std::endl;
             return;
         }
     }
 
-    // No recyclable slot, create new
     if (enemies.size() < static_cast<size_t>(config.maxActiveEnemies))
     {
         enemies.emplace_back();
@@ -147,18 +214,54 @@ void EnemySpawnManager::ForceSpawn(sf::Vector2f position, std::vector<Enemy1>& e
         newEnemy.sprite->setPosition(newEnemy.pos);
         totalEnemiesSpawned++;
 
-        std::cout << "Force spawned NEW enemy at (" << position.x << ", " << position.y << ")" << std::endl;
+        std::cout << "Force spawned NEW melee enemy at (" << position.x << ", " << position.y << ")" << std::endl;
     }
+}
+
+void EnemySpawnManager::ForceSpawnArcher(
+    sf::Vector2f position,
+    std::vector<Enemy2>& archers)
+{
+    for (auto& archer : archers)
+    {
+        if (archer.health <= 0)
+        {
+            archer.SetupEnemy2();
+            archer.Reset();
+            archer.pos = position;
+            archer.sprite->setPosition(archer.pos);
+
+            totalArchersSpawned++;
+            std::cout << "Force spawned archer at ("
+                << position.x << ", " << position.y << ")\n";
+            return;
+        }
+    }
+
+    // --- CAP CHECK ---
+    if (archers.size() >= static_cast<size_t>(archerConfig.maxActiveEnemies))
+        return;
+
+    // --- CREATE NEW ARCHER ---
+    archers.emplace_back();
+    auto& newArcher = archers.back();
+
+    newArcher.SetupEnemy2();   // textures + sprite
+    newArcher.Reset();         // reset state
+    newArcher.pos = position;
+    newArcher.sprite->setPosition(newArcher.pos);
+
+    totalArchersSpawned++;
+    std::cout << "Force spawned NEW archer at ("
+        << position.x << ", " << position.y << ")\n";
 }
 
 float EnemySpawnManager::GetRandomSpawnX(sf::Vector2f playerPos, float rightmostChunkX)
 {
-    // Spawn somewhere ahead of player but within loaded chunks
     float spawnDistance = distanceDistribution(rng);
     float potentialSpawnX = playerPos.x + spawnDistance;
 
-    // Make sure we don't spawn beyond the rightmost chunk
-    float maxSpawnX = rightmostChunkX - 200.f; // Leave some margin
+    float maxSpawnX = rightmostChunkX - 200.f;
 
     if (potentialSpawnX > maxSpawnX)
     {
@@ -168,23 +271,25 @@ float EnemySpawnManager::GetRandomSpawnX(sf::Vector2f playerPos, float rightmost
     return potentialSpawnX;
 }
 
-float EnemySpawnManager::GetSpawnY()
+float EnemySpawnManager::GetSpawnY(float spawnX, const std::vector<Chunk>& chunks)
 {
-    // Ground level is around 746-760 based on your game
-    float baseGroundY = 746.f;
-    float variation = heightVariation(rng);
-    return baseGroundY + variation;
+    // Start searching from a base height
+    float searchStartY = 500.f;
+
+    // Use unified collision system to find ground
+    float groundY = EnemyCollision::FindGroundY(spawnX, searchStartY, chunks, 300.f);
+
+    return groundY;
 }
 
 bool EnemySpawnManager::CanSpawnAt(float worldX)
 {
-    // Check if too close to recent spawns
     for (const auto& record : recentSpawns)
     {
         float distance = std::abs(worldX - record.worldX);
         if (distance < MIN_SPAWN_SEPARATION)
         {
-            return false; // Too close to a recent spawn
+            return false;
         }
     }
 
@@ -193,7 +298,6 @@ bool EnemySpawnManager::CanSpawnAt(float worldX)
 
 void EnemySpawnManager::CleanupOldSpawnRecords(float currentTime)
 {
-    // Remove spawn records older than SPAWN_RECORD_DURATION
     recentSpawns.erase(
         std::remove_if(recentSpawns.begin(), recentSpawns.end(),
             [currentTime, this](const SpawnRecord& record) {
@@ -205,15 +309,12 @@ void EnemySpawnManager::CleanupOldSpawnRecords(float currentTime)
 
 bool EnemySpawnManager::IsValidSpawnPosition(float worldX, float playerX, float rightmostChunkX)
 {
-    // Must be ahead of player
     if (worldX < playerX + config.minSpawnDistance)
         return false;
 
-    // Must not be too far ahead
     if (worldX > playerX + config.maxSpawnDistance)
         return false;
 
-    // Must be within loaded chunks
     if (worldX > rightmostChunkX - 200.f)
         return false;
 
@@ -228,10 +329,13 @@ void EnemySpawnManager::DrawDebugInfo(sf::RenderWindow& window,
     debugText.setFillColor(sf::Color::Yellow);
     debugText.setPosition({ 50.f, 120.f });
 
-    std::string info = "Enemies: " + std::to_string(activeEnemyCount) + "/"
+    std::string info = "Melee: " + std::to_string(activeEnemyCount) + "/"
         + std::to_string(config.maxActiveEnemies);
-    info += "\nTotal Spawned: " + std::to_string(totalEnemiesSpawned);
-    info += "\nNext Spawn: " + std::to_string(static_cast<int>(spawnCooldownTimer)) + "s";
+    info += " | Archers: " + std::to_string(activeArcherCount) + "/"
+        + std::to_string(archerConfig.maxActiveEnemies);
+    info += "\nTotal Spawned: " + std::to_string(totalEnemiesSpawned + totalArchersSpawned);
+    info += "\nNext Melee: " + std::to_string(static_cast<int>(spawnCooldownTimer)) + "s";
+    info += " | Next Archer: " + std::to_string(static_cast<int>(archerSpawnCooldownTimer)) + "s";
     info += "\nDifficulty: " + std::to_string(difficultyMultiplier).substr(0, 4) + "x";
 
     debugText.setString(info);

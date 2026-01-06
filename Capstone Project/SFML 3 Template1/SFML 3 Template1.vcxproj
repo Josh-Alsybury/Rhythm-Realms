@@ -36,6 +36,7 @@
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Enemy1.h" />
     <ClInclude Include="Enemy2.h" />
+    <ClInclude Include="EnemyCollision.h" />
     <ClInclude Include="EnemySpawnManager.h" />
     <ClInclude Include="EnemyTextures.h" />
     <ClInclude Include="Headers\Background.h" />

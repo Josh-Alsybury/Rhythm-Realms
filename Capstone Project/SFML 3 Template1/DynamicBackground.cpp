@@ -18,7 +18,7 @@ bool DynamicBackground::loadtheme(const std::string& folderPath)
     }
 
     m_currentTheme = folderPath;
-    return false;
+    return true;
 }
 
 void DynamicBackground::update(const sf::Vector2f& cameraOffset)
@@ -35,12 +35,13 @@ void DynamicBackground::update(const sf::Vector2f& cameraOffset)
 
         if (progress >= 1.0f)
         {
-            // Transition complete
             m_layers = std::move(m_newLayers);
             m_newLayers.clear();
+
             m_currentTheme = m_nextTheme;
             m_isTransitioning = false;
             m_transitionTimer = 0.0f;
+
             for (auto& layer : m_layers)
             {
                 layer.setOpacity(1.0f);
@@ -94,6 +95,7 @@ void DynamicBackground::transitionTo(const std::string& newFolderPath)
     if (m_currentTheme == newFolderPath || m_isTransitioning)
         return;
     m_newLayers.clear();
+    std::cout << "Transitioning BG to: " << newFolderPath << std::endl;
     for (int i = 1; i <= 3; ++i)
     {
         std::string filePath = newFolderPath + "/layer_" + std::to_string(i) + ".png";
