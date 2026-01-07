@@ -152,18 +152,11 @@ void Game::processEvents()
 
 void Game::initializeGame()
 {
-	// Background
+	// Background - Start with Forest theme
+	m_currentGameTheme = GameTheme::Forest;
+	m_dynamicBackground.setCurrentTheme(m_currentGameTheme);
 	m_dynamicBackground.loadtheme(
-		"ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
-
-	// Chunk paths
-	m_chunkPaths =
-	{
-		"ASSETS/CHUNKS/Chunk1(Forest).tmj",
-		"ASSETS/CHUNKS/Chunk2(Forest).tmj",
-		"ASSETS/CHUNKS/Chunk3(Forest).tmj",
-		"ASSETS/CHUNKS/Chunk4(Forest).tmj"
-	};
+		DynamicBackground::GetBackgroundPath(m_currentGameTheme));
 
 	m_bpmText.setFont(m_jerseyFont);
 	m_bpmText.setCharacterSize(32);
@@ -174,7 +167,7 @@ void Game::initializeGame()
 	// Audio setup
 	if (!m_useSpotify)
 	{
-		setupAudio(); // local BPM stream
+		setupAudio();
 	}
 	else
 	{
@@ -189,11 +182,7 @@ void Game::initializeGame()
 
 	// Enemies
 	m_enemies.clear();
-
-	// Configure spawn manager
 	m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
-
-	// Spawn 2 initial enemies so player sees something immediately
 	m_enemySpawnManager.ForceSpawn({ 850.f, 746.f }, m_enemies);
 	m_enemySpawnManager.ForceSpawn({ 1150.f, 746.f }, m_enemies);
 
@@ -201,14 +190,13 @@ void Game::initializeGame()
 
 	m_archers.clear();
 	m_arrows.clear();
-
 	m_enemySpawnManager.ForceSpawnArcher({ 1500.f, 746.f }, m_archers);
 
-	// Tileset
-	if (!m_tilesetTexture.loadFromFile(
-		"ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Tileset/Tileset.png"))
+	// NEW: Load tileset based on current theme
+	std::string tilesetPath = DynamicBackground::GetTilesetTexturePath(m_currentGameTheme);
+	if (!m_tilesetTexture.loadFromFile(tilesetPath))
 	{
-		std::cout << "Failed to load tileset!" << std::endl;
+		std::cout << "Failed to load tileset: " << tilesetPath << std::endl;
 	}
 	m_tilesetTexture.setSmooth(false);
 
@@ -225,16 +213,6 @@ void Game::initializeGame()
 	}
 
 	m_nextChunkIndex = VISIBLE_CHUNKS;
-
-	// Audio
-	if (!m_useSpotify)
-	{
-		setupAudio(); // local BPM stream
-	}
-	else
-	{
-		std::cout << "Using Spotify BPM source" << std::endl;
-	}
 }
 
 
@@ -314,23 +292,38 @@ void Game::update(sf::Time t_deltaTime)
 
 	if (bpmForTheme > 0.0)
 	{
-		if (bpmForTheme > 150.0f && m_currentTheme != "Factory")
+		GameTheme newTheme = DynamicBackground::GetThemeFromBPM(bpmForTheme);
+
+		if (newTheme != m_currentGameTheme)
 		{
-			std::cout << "Transitioning to Factory theme (BPM: " << m_currentBPM << ")\n";
-			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Factory/Background");
-			m_currentTheme = "Factory";
-		}
-		else if (bpmForTheme >= 90.0f && bpmForTheme <= 150.0f && m_currentTheme != "Forest")
-		{
-			std::cout << "Transitioning to Forest theme (BPM: " << m_currentBPM << ")\n";
-			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background");
-			m_currentTheme = "Forest";
-		}
-		else if (bpmForTheme < 90.0f && m_currentTheme != "Medieval")
-		{
-			std::cout << "Transitioning to Medieval theme (BPM: " << bpmForTheme << ")\n";
-			m_dynamicBackground.transitionTo("ASSETS/IMAGES/Background");
-			m_currentTheme = "Medieval";
+			std::cout << "BPM " << bpmForTheme << " -> Switching to theme: "
+				<< (int)newTheme << std::endl;
+
+			m_currentGameTheme = newTheme;
+			m_dynamicBackground.setCurrentTheme(newTheme);
+
+			// Transition background
+			m_dynamicBackground.transitionTo(
+				DynamicBackground::GetBackgroundPath(newTheme));
+
+			// Load new tileset texture
+			std::string newTilesetPath = DynamicBackground::GetTilesetTexturePath(newTheme);
+			if (m_tilesetTexture.loadFromFile(newTilesetPath))
+			{
+				m_tilesetTexture.setSmooth(false);
+				std::cout << "Loaded new tileset: " << newTilesetPath << std::endl;
+
+				// Reload all visible chunks with new tileset
+				for (int i = 0; i < m_chunks.size(); ++i)
+				{
+					float chunkX = m_chunks[i].getPosition().x;
+					loadChunkAt(i, chunkX);
+				}
+			}
+			else
+			{
+				std::cerr << "Failed to load new tileset!" << std::endl;
+			}
 		}
 	}
 
@@ -885,10 +878,14 @@ void Game::updateChunks()
 
 bool Game::loadChunkAt(int index, float xPosition)
 {
-	int randomIndex = rand() % m_chunkPaths.size();
-	std::string chunkFile = m_chunkPaths[randomIndex];
+	std::vector<std::string> chunkPaths = DynamicBackground::GetChunkPaths(m_currentGameTheme);
 
-	if (!m_chunks[index].load(chunkFile, m_tilesetTexture, 32))
+	int randomIndex = rand() % chunkPaths.size();
+	std::string chunkFile = chunkPaths[randomIndex];
+
+	std::string tilesetPath = DynamicBackground::GetTilesetPath(m_currentGameTheme);
+
+	if (!m_chunks[index].load(chunkFile, m_tilesetTexture, 32, tilesetPath))
 	{
 		std::cout << "Failed to load chunk at index " << index << std::endl;
 		return false;

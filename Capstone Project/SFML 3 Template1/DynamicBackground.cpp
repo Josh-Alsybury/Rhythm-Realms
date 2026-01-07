@@ -113,3 +113,91 @@ void DynamicBackground::transitionTo(const std::string& newFolderPath)
     m_isTransitioning = true;
     m_transitionTimer = 0.0f;
 }
+
+GameTheme DynamicBackground::GetThemeFromBPM(float bpm)
+{
+    if (bpm > 150.0f)
+        return GameTheme::Factory;
+    else if (bpm >= 90.0f && bpm <= 150.0f)
+        return GameTheme::Forest;
+    else // < 90
+        return GameTheme::Medieval;
+}
+
+std::string DynamicBackground::GetBackgroundPath(GameTheme theme)
+{
+    switch (theme)
+    {
+    case GameTheme::Forest:
+        return "ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background";
+    case GameTheme::Medieval:
+        return "ASSETS/IMAGES/Background";
+    case GameTheme::Factory:
+        return "ASSETS/IMAGES/Factory/Background";
+    default:
+        return "ASSETS/IMAGES/Autumn Forest 2D Pixel Art/Background";
+    }
+}
+
+std::string DynamicBackground::GetTilesetTexturePath(GameTheme theme)
+{
+    switch (theme)
+    {
+    case GameTheme::Forest:
+        return "ASSETS/Tileset/Tileset.png";
+    case GameTheme::Medieval:
+        return "ASSETS/Tileset/TilesetMedival.png";
+    case GameTheme::Factory:
+        return "ASSETS/Tileset/TilesetFactory.png";
+    default:
+        return "ASSETS/Tileset/Tileset.png";
+    }
+}
+
+std::string DynamicBackground::GetTilesetPath(GameTheme theme)
+{
+    switch (theme)
+    {
+    case GameTheme::Forest:
+        return "ASSETS/Tiles/Forest.tsj";
+    case GameTheme::Medieval:
+        return "ASSETS/Tiles/Medival.tsj";
+    case GameTheme::Factory:
+        return "ASSETS/Tiles/Factory.tsj";
+    default:
+        return "ASSETS/Tiles/Forest.tsj";
+    }
+}
+
+std::vector<std::string> DynamicBackground::GetChunkPaths(GameTheme theme)
+{
+    switch (theme)
+    {
+    case GameTheme::Forest:
+        return {
+            "ASSETS/CHUNKS/Chunk1(Forest).tmj",
+            "ASSETS/CHUNKS/Chunk2(Forest).tmj",
+            "ASSETS/CHUNKS/Chunk3(Forest).tmj",
+            "ASSETS/CHUNKS/Chunk4(Forest).tmj"
+        };
+
+    case GameTheme::Medieval:
+        return {
+            "ASSETS/CHUNKS/Chunk1(Medival).tmj",
+            "ASSETS/CHUNKS/Chunk2(Medival).tmj",
+            "ASSETS/CHUNKS/Chunk3(Medival).tmj",
+            "ASSETS/CHUNKS/Chunk4(Medival).tmj"
+        };
+
+    case GameTheme::Factory:
+        return {
+            "ASSETS/CHUNKS/Chunk1(Factory).tmj",
+            "ASSETS/CHUNKS/Chunk2(Factory).tmj",
+            "ASSETS/CHUNKS/Chunk3(Factory).tmj",
+            "ASSETS/CHUNKS/Chunk4(Factory).tmj"
+        };
+
+    default:
+        return GetChunkPaths(GameTheme::Forest);
+    }
+}

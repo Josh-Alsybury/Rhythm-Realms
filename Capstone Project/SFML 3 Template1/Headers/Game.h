@@ -36,6 +36,7 @@
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
 
+
 class Game
 {
 public:
@@ -84,7 +85,7 @@ private:
 
 	void updateChunks();  //Manages chunk loading/unloading
 	bool loadChunkAt(int index, float xPosition);  // Loads chunk at position
-	std::vector<std::string> m_chunkPaths;
+	GameTheme m_currentGameTheme = GameTheme::Forest;
 	std::vector<Chunk> m_chunks;  // from single Chunk to vector
 	const int VISIBLE_CHUNKS = 3;  // NNumber of chunks to keep loaded
 	float m_chunkWidth = 640.0f;   // Width of each chunk (20 tiles * 32px)

@@ -1,11 +1,11 @@
-{ "columns":20,
- "image":"..\/Tileset\/TilesetMedival.png",
- "imageheight":479,
- "imagewidth":671,
+{ "columns":12,
+ "image":"..\/Tileset\/TilesetFactory.png",
+ "imageheight":128,
+ "imagewidth":384,
  "margin":0,
- "name":"oak_woods_tileset",
+ "name":"Factory_Terrain_47Tiles",
  "spacing":0,
- "tilecount":280,
+ "tilecount":48,
  "tiledversion":"1.11.2",
  "tileheight":32,
  "tiles":[
@@ -46,6 +46,15 @@
                 }]
         }, 
         {
+         "id":4,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
          "id":5,
          "properties":[
                 {
@@ -73,24 +82,6 @@
                 }]
         }, 
         {
-         "id":8,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":10,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
          "id":12,
          "properties":[
                 {
@@ -100,7 +91,7 @@
                 }]
         }, 
         {
-         "id":20,
+         "id":14,
          "properties":[
                 {
                  "name":"solid",
@@ -109,7 +100,115 @@
                 }]
         }, 
         {
-         "id":23,
+         "id":15,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":16,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":19,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":24,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":25,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":26,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":27,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":28,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":31,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":36,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":37,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":38,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":39,
          "properties":[
                 {
                  "name":"solid",
@@ -127,133 +226,25 @@
                 }]
         }, 
         {
+         "id":41,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
+         "id":42,
+         "properties":[
+                {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }]
+        }, 
+        {
          "id":43,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":50,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":60,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":63,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":69,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":71,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":90,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":132,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":133,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":145,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":146,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":147,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":185,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":186,
-         "properties":[
-                {
-                 "name":"solid",
-                 "type":"bool",
-                 "value":true
-                }]
-        }, 
-        {
-         "id":187,
          "properties":[
                 {
                  "name":"solid",

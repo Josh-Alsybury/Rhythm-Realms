@@ -1,0 +1,14 @@
+{ "columns":20,
+ "image":"..\/..\/..\/..\/..\/monochrome_tilemap_packed.png",
+ "imageheight":640,
+ "imagewidth":640,
+ "margin":0,
+ "name":"monochrome_tilemap_packed",
+ "spacing":0,
+ "tilecount":400,
+ "tiledversion":"1.11.2",
+ "tileheight":32,
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}

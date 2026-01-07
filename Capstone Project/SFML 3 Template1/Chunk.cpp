@@ -6,7 +6,7 @@
 
 // Load tile data from JSON
 bool isBackground(int id) {
-    return id == 1 || id == 2;   // adjust for your tileset
+    return id == 1 || id == 2;
 }
 
 std::unordered_set<int> Chunk::loadSolidTilesFromTilesetCached(const std::string& path) {
@@ -45,7 +45,7 @@ std::unordered_set<int> Chunk::loadSolidTilesFromTilesetCached(const std::string
 }
 
 // Load chunk data from Tiled JSON file and initialize collision/rendering
-bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSize) {
+bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSize, const std::string& tilesetPath) {
 
     clearTiles();
 
@@ -63,14 +63,12 @@ bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSi
     m_width = data["width"];
     m_height = data["height"];
     m_tileSize = tileSize;
-
-
+    m_currentTilesetPath = tilesetPath; 
 
     m_tiles.assign(m_width * m_height, 0);
 
     for (int L = data["layers"].size() - 1; L >= 0; --L) {
         auto& layer = data["layers"][L];
-
         auto& layerData = layer["data"];
 
         for (int i = 0; i < layerData.size(); ++i) {
@@ -85,15 +83,13 @@ bool Chunk::load(const std::string& file, const sf::Texture& tileset, int tileSi
         }
     }
 
-
-    // Define which tile IDs are solid for collision
-    std::unordered_set<int> solidTileIds = Chunk::loadSolidTilesFromTilesetCached("ASSETS/Tiles/Forest.tsj");
+    std::unordered_set<int> solidTileIds = Chunk::loadSolidTilesFromTilesetCached(tilesetPath);
 
     // Fallback to hardcoded if tileset loading failed
     if (solidTileIds.empty()) {
         std::cout << "Warning: No solid tiles loaded from tileset, using defaults" << std::endl;
         solidTileIds = { 3, 29 };
-    }  // CLOSE THE IF STATEMENT HERE
+    }
 
     // Build collision map 
     m_collisionTiles.resize(m_width * m_height, 0);
@@ -173,7 +169,7 @@ void Chunk::buildVertexArray() {
 
 // Render chunk with camera offset (single draw call)
 void Chunk::draw(sf::RenderTarget& target, sf::Vector2f cameraOffset) {
-    
+
     if (m_vertices.getVertexCount() == 0) {
         return;  // Nothing to draw
     }
@@ -182,7 +178,7 @@ void Chunk::draw(sf::RenderTarget& target, sf::Vector2f cameraOffset) {
     states.texture = m_tileset;
 
     // Round to integer pixel positions
-    sf::Vector2f renderPos = m_position - cameraOffset; //This prevents subpixel rendering that causes texture bleeding.
+    sf::Vector2f renderPos = m_position - cameraOffset;
     renderPos.x = std::round(renderPos.x);
     renderPos.y = std::round(renderPos.y);
 
@@ -199,7 +195,6 @@ void Chunk::clearTiles() {
 }
 
 // ===== COLLISION DETECTION =====
-
 
 //Get tile ID at local grid coordinates
 int Chunk::getTileAt(int x, int y) const {
@@ -249,4 +244,3 @@ void Chunk::drawDebugCollision(sf::RenderTarget& target, sf::Vector2f cameraOffs
         }
     }
 }
-
