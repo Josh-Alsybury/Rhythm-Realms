@@ -152,16 +152,10 @@ void Game::processEvents()
 
 void Game::initializeGame()
 {
-	// Background - Start with Forest theme
-	m_currentGameTheme = GameTheme::Forest;
-	m_dynamicBackground.setCurrentTheme(m_currentGameTheme);
-	m_dynamicBackground.loadtheme(
-		DynamicBackground::GetBackgroundPath(m_currentGameTheme));
-
 	m_bpmText.setFont(m_jerseyFont);
 	m_bpmText.setCharacterSize(32);
 	m_bpmText.setFillColor(sf::Color::White);
-	m_bpmText.setPosition(sf::Vector2f(50.f, 50.f));
+	m_bpmText.setPosition(sf::Vector2f(10.f, 75.f));
 	m_bpmText.setString("BPM: 0");
 
 	// Audio setup
@@ -175,44 +169,31 @@ void Game::initializeGame()
 	}
 
 	// Player setup
-	m_Player.pos.x = m_window.getSize().x / 2.f;
 	m_Player.SetupPlayer();
 	m_Player.HealCall();
 	m_Player.Health();
 
-	// Enemies
-	m_enemies.clear();
-	m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
-	m_enemySpawnManager.ForceSpawn({ 850.f, 746.f }, m_enemies);
-	m_enemySpawnManager.ForceSpawn({ 1150.f, 746.f }, m_enemies);
-
 	m_gameTimer = 0.f;
 
-	m_archers.clear();
-	m_arrows.clear();
-	m_enemySpawnManager.ForceSpawnArcher({ 1500.f, 746.f }, m_archers);
+	// ===== START IN HUB =====
+	m_isInHub = true;
+	m_currentGameTheme = GameTheme::Hub;
 
-	// NEW: Load tileset based on current theme
+	// Load HUB tileset
 	std::string tilesetPath = DynamicBackground::GetTilesetTexturePath(m_currentGameTheme);
 	if (!m_tilesetTexture.loadFromFile(tilesetPath))
 	{
-		std::cout << "Failed to load tileset: " << tilesetPath << std::endl;
+		std::cout << "Failed to load hub tileset: " << tilesetPath << std::endl;
 	}
 	m_tilesetTexture.setSmooth(false);
 
-	// Chunks
-	m_chunks.clear();
-	m_chunks.resize(VISIBLE_CHUNKS);
+	// Clear enemies (no enemies in hub)
+	m_enemies.clear();
+	m_archers.clear();
+	m_arrows.clear();
 
-	loadChunkAt(0, 0);
-	m_chunkWidth = m_chunks[0].getWidth();
-
-	for (int i = 1; i < VISIBLE_CHUNKS; ++i)
-	{
-		loadChunkAt(i, i * m_chunkWidth);
-	}
-
-	m_nextChunkIndex = VISIBLE_CHUNKS;
+	// USE HUB CLASS TO LOAD
+	m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth);
 }
 
 
@@ -267,103 +248,26 @@ void Game::checkKeyboardState()
 void Game::update(sf::Time t_deltaTime)
 {
 	checkKeyboardState();
+	float dt = t_deltaTime.asSeconds();
 
-	float rawBPM = 0.f;
-
-	if (m_useSpotify)
-	{
-		auto trackInfo = m_spotifyClient.GetCurrentTrack();
-		rawBPM = trackInfo.bpm;
-	}
-	else
-	{
-		rawBPM = m_bpmStream.getCurrentBPM();
-	}
-
-	if (rawBPM <= 0.f)
-	{
-		rawBPM = m_currentBPM;
-	}
-
-	static float smoothedBPM = 120.f;
-	smoothedBPM += (rawBPM - smoothedBPM) * 0.05f;
-	m_currentBPM = smoothedBPM;
-	float bpmForTheme = rawBPM;
-
-	if (bpmForTheme > 0.0)
-	{
-		GameTheme newTheme = DynamicBackground::GetThemeFromBPM(bpmForTheme);
-
-		if (newTheme != m_currentGameTheme)
-		{
-			std::cout << "BPM " << bpmForTheme << " -> Switching to theme: "
-				<< (int)newTheme << std::endl;
-
-			m_currentGameTheme = newTheme;
-			m_dynamicBackground.setCurrentTheme(newTheme);
-
-			// Transition background
-			m_dynamicBackground.transitionTo(
-				DynamicBackground::GetBackgroundPath(newTheme));
-
-			// Load new tileset texture
-			std::string newTilesetPath = DynamicBackground::GetTilesetTexturePath(newTheme);
-			if (m_tilesetTexture.loadFromFile(newTilesetPath))
-			{
-				m_tilesetTexture.setSmooth(false);
-				std::cout << "Loaded new tileset: " << newTilesetPath << std::endl;
-
-				// Reload all visible chunks with new tileset
-				for (int i = 0; i < m_chunks.size(); ++i)
-				{
-					float chunkX = m_chunks[i].getPosition().x;
-					loadChunkAt(i, chunkX);
-				}
-			}
-			else
-			{
-				std::cerr << "Failed to load new tileset!" << std::endl;
-			}
-		}
-	}
-
-	if (m_useSpotify)
-	{
-		m_bpmText.setString("Track Tempo: " + std::to_string((int)m_currentBPM));
-	}
-	else
-	{
-		m_bpmText.setString("Live BPM: " + std::to_string((int)m_currentBPM));
-	}
-
+	// ===== PLAYER INPUT (always active) =====
 	if (!m_showSkillTree)
 	{
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
-		{
 			m_Player.moveLeft();
-		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
-		{
 			m_Player.moveRight();
-		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
-		{
 			m_Player.Jump();
-		}
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right))
-		{
 			m_Player.Attack();
-		}
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
-		{
 			m_Player.Defend();
-		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
-		{
 			m_Player.Heal();
-		}
 	}
 
+	// ===== CAMERA (always active) =====
 	float leftMargin = m_screenMargin;
 	float rightMargin = (m_window.getSize().x - 150) - m_screenMargin;
 	float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
@@ -376,22 +280,8 @@ void Game::update(sf::Time t_deltaTime)
 	m_cameraOffset.x = std::round(m_cameraOffset.x);
 	m_cameraOffset.y = std::round(m_cameraOffset.y);
 
-	m_dynamicBackground.update(m_cameraOffset);
-	float dt = t_deltaTime.asSeconds();
-	m_gameTimer += dt;
-
-	if (m_currentBPM > 140.f) {
-		m_enemySpawnManager.SetSpawnConfig(m_hardConfig);
-	}
-	else if (m_currentBPM < 100.f) {
-		m_enemySpawnManager.SetSpawnConfig(m_easyConfig);
-	}
-	else {
-		m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
-	}
-
+	// ===== PLAYER COLLISION (always active) =====
 	sf::Vector2f oldPos = m_Player.pos;
-
 	m_Player.pos.x += m_Player.velocity.x * dt;
 
 	sf::FloatRect playerBox(
@@ -431,259 +321,376 @@ void Game::update(sf::Time t_deltaTime)
 				m_Player.velocity.y = 0;
 
 				float chunkRelativeY = playerFeetY - chunk.getPosition().y;
-				int tileY = static_cast<int>(chunkRelativeY / 32.0f);
-				m_Player.pos.y = chunk.getPosition().y + (tileY * 32.0f) - 50.0f;
+				float tileSize = 32.f; // or chunk.getTileSize()
+				int tileY = static_cast<int>(chunkRelativeY / tileSize);
+				m_Player.pos.y = chunk.getPosition().y + tileY * tileSize - 50.f;
 				break;
 			}
 		}
 	}
 
 	m_Player.Update(dt);
-	updateChunks();
 
 	if (m_DELETEexitGame)
 	{
 		m_window.close();
 	}
 
-	if (!m_showSkillTree)
+	// ===== STATE-BASED UPDATE =====
+	if (m_isInHub)
 	{
-		float rightmostChunkX = -999999.0f;
-		for (const auto& chunk : m_chunks) {
-			float chunkRight = chunk.getPosition().x + chunk.getWidth();
-			if (chunkRight > rightmostChunkX)
-				rightmostChunkX = chunkRight;
-		}
-
-		m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, m_archers, rightmostChunkX, m_chunks);
-
-		// ========== UPDATE MELEE ENEMIES ==========
-		for (auto& enemy : m_enemies)
+		// USE HUB CLASS TO UPDATE
+		if (m_hub.Update(dt, m_Player))
 		{
-			if (enemy.health <= 0) continue;
+			std::cout << "\n=== STARTING EXPEDITION ===" << std::endl;
 
-			// Store old position
-			sf::Vector2f oldPos = enemy.pos;
+			m_isInHub = false;
+			m_currentGameTheme = GameTheme::Forest;
 
-			// Update enemy (AI + movement)
-			enemy.Update(dt, m_Player.pos);
-			// ledge coverage
-			bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
-				oldPos,  // Check from OLD position
-				enemy.facingRight,
-				m_chunks,
-				45.f
-			);
+			// Load expedition background
+			m_dynamicBackground.setCurrentTheme(m_currentGameTheme);
+			m_dynamicBackground.loadtheme(DynamicBackground::GetBackgroundPath(m_currentGameTheme));
 
-			if (wouldFallOffLedge && enemy.velocity.x != 0.f)
+			// Load expedition tileset
+			std::string tilesetPath = DynamicBackground::GetTilesetTexturePath(m_currentGameTheme);
+			if (m_tilesetTexture.loadFromFile(tilesetPath))
 			{
-				// SMART BEHAVIOR: Back away from ledge instead of stopping
-				enemy.pos.x = oldPos.x;
-
-				// Back up slowly (half speed)
-				float backupDir = enemy.facingRight ? -1.f : 1.f;
-				enemy.velocity.x = backupDir * enemy.speed * 0.5f;
-				enemy.pos.x += enemy.velocity.x * dt;
-
+				m_tilesetTexture.setSmooth(false);
 			}
 
-			// Apply horizontal collision
-			EnemyCollision::CheckHorizontalCollision(
-				enemy.pos,
-				enemy.velocity,
-				m_chunks,
-				dt
-			);
-
-			// Snap to ground (prevents floating)
-			EnemyCollision::ApplyGravityAndGround(
-				enemy.pos,
-				enemy.velocity,  // Pass velocity so gravity can update it
-				m_chunks,
-				dt
-			);
-
-			// Update sprite position
-			if (enemy.sprite)
-				enemy.sprite->setPosition(enemy.pos);
-
-			// Player/enemy combat (your existing code)
-			if (m_Player.canDamageEnemy)
+			// Load expedition chunks
+			m_chunks.clear();
+			m_chunks.resize(VISIBLE_CHUNKS);
+			loadChunkAt(0, 0);
+			m_chunkWidth = m_chunks[0].getWidth();
+			for (int i = 1; i < VISIBLE_CHUNKS; ++i)
 			{
-				float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
-				float dy = m_Player.attackHitbox.getPosition().y - enemy.pos.y;
-				float distance = std::sqrt(dx * dx + dy * dy);
-
-				if (distance < m_Player.attackHitboxRadius + 30.f)
-				{
-					enemy.TakeDamage(1);
-					m_Player.canDamageEnemy = false;
-
-					if (enemy.health <= 0)
-					{
-						std::cout << "Enemy defeated!" << std::endl;
-						m_skillTree.AddSkillPoint();
-					}
-				}
+				loadChunkAt(i, i * m_chunkWidth);
 			}
 
-			if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
-			{
-				float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
-				float dy = enemy.attackHitbox.getPosition().y - m_Player.pos.y;
-				float distance = std::sqrt(dx * dx + dy * dy);
+			// Position player
+			m_Player.pos.x = 500.f;
+			m_Player.pos.y = 500.f;
 
-				if (m_Player.canBlockEnemy)
-				{
-					std::cout << "Attack blocked!" << std::endl;
-					float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
-					m_Player.velocity.x = knockbackDirection * 200.f;
-					if (m_Player.isOnGround)
-						m_Player.velocity.y = -10.f;
-					m_Player.isKnockedBack = true;
-					m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
-					enemy.hasDealtDamage = true;
-					enemy.canDamagePlayer = false;
-				}
-				else
-				{
-					m_Player.TakeDamage(1);
-					enemy.hasDealtDamage = true;
-					enemy.canDamagePlayer = false;
-					std::cout << "Player hit! Health: " << m_Player.health << std::endl;
-				}
-			}
+			// Spawn enemies
+			m_enemySpawnManager.ForceSpawn({ 850.f, 746.f }, m_enemies);
+			m_enemySpawnManager.ForceSpawn({ 1150.f, 746.f }, m_enemies);
+			m_enemySpawnManager.ForceSpawnArcher({ 1500.f, 746.f }, m_archers);
+
+			std::cout << "Expedition started!" << std::endl;
 		}
-
-		// ========== UPDATE ARCHERS WITH COLLISION ==========
-		for (auto& archer : m_archers)
-		{
-			if (archer.health <= 0) continue;
-
-			// Store old position
-			sf::Vector2f oldPos = archer.pos;
-
-			// Update archer (AI + movement)
-			archer.Update(dt, m_Player.pos);
-			// ledge coverage 
-			bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
-				oldPos,
-				archer.facingRight,
-				m_chunks,
-				45.f
-			);
-
-			if (wouldFallOffLedge && archer.velocity.x != 0.f)
-			{
-				// ARCHERS: Back away from ledge (they prefer range anyway!)
-				archer.pos.x = oldPos.x;
-
-				// Back up to maintain distance
-				float backupDir = archer.facingRight ? -1.f : 1.f;
-				archer.velocity.x = backupDir * archer.speed * 0.3f;
-				archer.pos.x += archer.velocity.x * dt;
-			}
-
-
-			// Apply horizontal collision
-			EnemyCollision::CheckHorizontalCollision(
-				archer.pos,
-				archer.velocity,
-				m_chunks,
-				dt
-			);
-
-			// Snap to ground
-			EnemyCollision::ApplyGravityAndGround(
-				archer.pos,
-				archer.velocity,  // Pass velocity so gravity can update it
-				m_chunks,
-				dt
-			);
-
-			// Update sprite position
-			if (archer.sprite)
-				archer.sprite->setPosition(archer.pos);
-
-			// Arrow spawning (your existing code)
-			if (archer.state == Enemy2::ArcherState::Attacking
-				&& archer.canDamagePlayer
-				&& !archer.hasDealtDamage)
-			{
-				sf::Vector2f arrowStart = archer.pos;
-				arrowStart.x += archer.facingRight ? 40.f : -40.f;
-				m_arrows.emplace_back(arrowStart, archer.facingRight);
-				archer.hasDealtDamage = true;
-				std::cout << "Archer shot arrow!" << std::endl;
-			}
-
-			// Player attacking archer (your existing code)
-			if (m_Player.canDamageEnemy)
-			{
-				float dx = m_Player.attackHitbox.getPosition().x - archer.pos.x;
-				float dy = m_Player.attackHitbox.getPosition().y - archer.pos.y;
-				float distance = std::sqrt(dx * dx + dy * dy);
-
-				if (distance < m_Player.attackHitboxRadius + 30.f)
-				{
-					archer.TakeDamage(1);
-					m_Player.canDamageEnemy = false;
-
-					if (archer.health <= 0)
-					{
-						std::cout << "Archer defeated!" << std::endl;
-						m_skillTree.AddSkillPoint();
-					}
-				}
-			}
-		}
-
-
-		// ========== UPDATE ARROWS (SEPARATE LOOP!) ==========
-		for (auto& arrow : m_arrows)
-		{
-			if (!arrow.active) continue;
-
-			arrow.Update(dt);
-
-			// Check if arrow hit player
-			sf::FloatRect arrowBounds = arrow.getBounds();
-			sf::FloatRect playerBounds(
-				{ m_Player.pos.x - 15.f, m_Player.pos.y - 20.f },
-				{ 30.f, 40.f }
-			);
-
-			if (arrowBounds.findIntersection(playerBounds).has_value())
-			{
-				if (m_Player.canBlockEnemy)
-				{
-					std::cout << "Arrow blocked!" << std::endl;
-					arrow.active = false;
-				}
-				else
-				{
-					m_Player.TakeDamage(1);
-					arrow.active = false;
-					std::cout << "Arrow hit player! Health: " << m_Player.health << std::endl;
-				}
-			}
-
-			// Remove arrows that are off-screen
-			if (arrow.IsOffScreen(m_cameraOffset.x, m_window.getSize().x))
-			{
-				arrow.active = false;
-			}
-		}
-
-		// Clean up inactive arrows
-		m_arrows.erase(
-			std::remove_if(m_arrows.begin(), m_arrows.end(),
-				[](const Arrow& arrow) { return !arrow.active; }),
-			m_arrows.end()
-		);
-
 	}
+	else  // EXPEDITION MODE
+	{
+		// Update background
+		m_dynamicBackground.update(m_cameraOffset);
+		m_gameTimer += dt;
 
+		// BPM processing
+		float rawBPM = 0.f;
+		if (m_useSpotify)
+		{
+			auto trackInfo = m_spotifyClient.GetCurrentTrack();
+			rawBPM = trackInfo.bpm;
+		}
+		else
+		{
+			rawBPM = m_bpmStream.getCurrentBPM();
+		}
+
+		if (rawBPM <= 0.f)
+			rawBPM = m_currentBPM;
+
+		static float smoothedBPM = 120.f;
+		smoothedBPM += (rawBPM - smoothedBPM) * 0.05f;
+		m_currentBPM = smoothedBPM;
+		float bpmForTheme = rawBPM;
+
+		// BPM text
+		if (m_useSpotify)
+			m_bpmText.setString("Track Tempo: " + std::to_string((int)m_currentBPM));
+		else
+			m_bpmText.setString("Live BPM: " + std::to_string((int)m_currentBPM));
+
+		// Theme switching
+		if (bpmForTheme > 0.0)
+		{
+			GameTheme newTheme = DynamicBackground::GetThemeFromBPM(bpmForTheme);
+
+			if (newTheme != m_currentGameTheme)
+			{
+				std::cout << "BPM " << bpmForTheme << " -> Switching to theme: " << (int)newTheme << std::endl;
+
+				m_currentGameTheme = newTheme;
+				m_dynamicBackground.setCurrentTheme(newTheme);
+				m_dynamicBackground.transitionTo(DynamicBackground::GetBackgroundPath(newTheme));
+
+				std::string newTilesetPath = DynamicBackground::GetTilesetTexturePath(newTheme);
+				if (m_tilesetTexture.loadFromFile(newTilesetPath))
+				{
+					m_tilesetTexture.setSmooth(false);
+					std::cout << "Loaded new tileset: " << newTilesetPath << std::endl;
+
+					for (int i = 0; i < m_chunks.size(); ++i)
+					{
+						float chunkX = m_chunks[i].getPosition().x;
+						loadChunkAt(i, chunkX);
+					}
+				}
+			}
+		}
+
+		// Difficulty scaling
+		if (m_currentBPM > 140.f)
+			m_enemySpawnManager.SetSpawnConfig(m_hardConfig);
+		else if (m_currentBPM < 100.f)
+			m_enemySpawnManager.SetSpawnConfig(m_easyConfig);
+		else
+			m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
+
+		// Chunk scrolling
+		updateChunks();
+
+		if (!m_showSkillTree)
+		{
+			// Enemy spawning + updates (all your existing code)
+			float rightmostChunkX = -999999.0f;
+			for (const auto& chunk : m_chunks)
+			{
+				float chunkRight = chunk.getPosition().x + chunk.getWidth();
+				if (chunkRight > rightmostChunkX)
+					rightmostChunkX = chunkRight;
+			}
+
+			m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, m_archers, rightmostChunkX, m_chunks);
+
+			// ========== UPDATE MELEE ENEMIES ==========
+			for (auto& enemy : m_enemies)
+			{
+				if (enemy.health <= 0) continue;
+
+				// Store old position
+				sf::Vector2f oldPos = enemy.pos;
+
+				// Update enemy (AI + movement)
+				enemy.Update(dt, m_Player.pos);
+				// ledge coverage
+				bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
+					oldPos,  // Check from OLD position
+					enemy.facingRight,
+					m_chunks,
+					45.f
+				);
+
+				if (wouldFallOffLedge && enemy.velocity.x != 0.f)
+				{
+					// SMART BEHAVIOR: Back away from ledge instead of stopping
+					enemy.pos.x = oldPos.x;
+
+					// Back up slowly (half speed)
+					float backupDir = enemy.facingRight ? -1.f : 1.f;
+					enemy.velocity.x = backupDir * enemy.speed * 0.5f;
+					enemy.pos.x += enemy.velocity.x * dt;
+
+				}
+
+				// Apply horizontal collision
+				EnemyCollision::CheckHorizontalCollision(
+					enemy.pos,
+					enemy.velocity,
+					m_chunks,
+					dt
+				);
+
+				// Snap to ground (prevents floating)
+				EnemyCollision::ApplyGravityAndGround(
+					enemy.pos,
+					enemy.velocity,  // Pass velocity so gravity can update it
+					m_chunks,
+					dt
+				);
+
+				// Update sprite position
+				if (enemy.sprite)
+					enemy.sprite->setPosition(enemy.pos);
+
+				// Player/enemy combat (your existing code)
+				if (m_Player.canDamageEnemy)
+				{
+					float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
+					float dy = m_Player.attackHitbox.getPosition().y - enemy.pos.y;
+					float distance = std::sqrt(dx * dx + dy * dy);
+
+					if (distance < m_Player.attackHitboxRadius + 30.f)
+					{
+						enemy.TakeDamage(1);
+						m_Player.canDamageEnemy = false;
+
+						if (enemy.health <= 0)
+						{
+							std::cout << "Enemy defeated!" << std::endl;
+							m_skillTree.AddSkillPoint();
+						}
+					}
+				}
+
+				if (enemy.canDamagePlayer && !enemy.hasDealtDamage)
+				{
+					float dx = enemy.attackHitbox.getPosition().x - m_Player.pos.x;
+					float dy = enemy.attackHitbox.getPosition().y - m_Player.pos.y;
+					float distance = std::sqrt(dx * dx + dy * dy);
+
+					if (m_Player.canBlockEnemy)
+					{
+						std::cout << "Attack blocked!" << std::endl;
+						float knockbackDirection = (m_Player.pos.x > enemy.pos.x) ? 1.0f : -1.0f;
+						m_Player.velocity.x = knockbackDirection * 200.f;
+						if (m_Player.isOnGround)
+							m_Player.velocity.y = -10.f;
+						m_Player.isKnockedBack = true;
+						m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
+						enemy.hasDealtDamage = true;
+						enemy.canDamagePlayer = false;
+					}
+					else
+					{
+						m_Player.TakeDamage(1);
+						enemy.hasDealtDamage = true;
+						enemy.canDamagePlayer = false;
+						std::cout << "Player hit! Health: " << m_Player.health << std::endl;
+					}
+				}
+			}
+
+			// ========== UPDATE ARCHERS WITH COLLISION ==========
+			for (auto& archer : m_archers)
+			{
+				if (archer.health <= 0) continue;
+
+				// Store old position
+				sf::Vector2f oldPos = archer.pos;
+
+				// Update archer (AI + movement)
+				archer.Update(dt, m_Player.pos);
+				// ledge coverage 
+				bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
+					oldPos,
+					archer.facingRight,
+					m_chunks,
+					45.f
+				);
+
+				if (wouldFallOffLedge && archer.velocity.x != 0.f)
+				{
+					// ARCHERS: Back away from ledge (they prefer range anyway!)
+					archer.pos.x = oldPos.x;
+
+					// Back up to maintain distance
+					float backupDir = archer.facingRight ? -1.f : 1.f;
+					archer.velocity.x = backupDir * archer.speed * 0.3f;
+					archer.pos.x += archer.velocity.x * dt;
+				}
+
+
+				// Apply horizontal collision
+				EnemyCollision::CheckHorizontalCollision(
+					archer.pos,
+					archer.velocity,
+					m_chunks,
+					dt
+				);
+
+				// Snap to ground
+				EnemyCollision::ApplyGravityAndGround(
+					archer.pos,
+					archer.velocity,  // Pass velocity so gravity can update it
+					m_chunks,
+					dt
+				);
+
+				// Update sprite position
+				if (archer.sprite)
+					archer.sprite->setPosition(archer.pos);
+
+				// Arrow spawning (your existing code)
+				if (archer.state == Enemy2::ArcherState::Attacking
+					&& archer.canDamagePlayer
+					&& !archer.hasDealtDamage)
+				{
+					sf::Vector2f arrowStart = archer.pos;
+					arrowStart.x += archer.facingRight ? 40.f : -40.f;
+					m_arrows.emplace_back(arrowStart, archer.facingRight);
+					archer.hasDealtDamage = true;
+					std::cout << "Archer shot arrow!" << std::endl;
+				}
+
+				// Player attacking archer (your existing code)
+				if (m_Player.canDamageEnemy)
+				{
+					float dx = m_Player.attackHitbox.getPosition().x - archer.pos.x;
+					float dy = m_Player.attackHitbox.getPosition().y - archer.pos.y;
+					float distance = std::sqrt(dx * dx + dy * dy);
+
+					if (distance < m_Player.attackHitboxRadius + 30.f)
+					{
+						archer.TakeDamage(1);
+						m_Player.canDamageEnemy = false;
+
+						if (archer.health <= 0)
+						{
+							std::cout << "Archer defeated!" << std::endl;
+							m_skillTree.AddSkillPoint();
+						}
+					}
+				}
+			}
+
+
+			// ========== UPDATE ARROWS (SEPARATE LOOP!) ==========
+			for (auto& arrow : m_arrows)
+			{
+				if (!arrow.active) continue;
+
+				arrow.Update(dt);
+
+				// Check if arrow hit player
+				sf::FloatRect arrowBounds = arrow.getBounds();
+				sf::FloatRect playerBounds(
+					{ m_Player.pos.x - 15.f, m_Player.pos.y - 20.f },
+					{ 30.f, 40.f }
+				);
+
+				if (arrowBounds.findIntersection(playerBounds).has_value())
+				{
+					if (m_Player.canBlockEnemy)
+					{
+						std::cout << "Arrow blocked!" << std::endl;
+						arrow.active = false;
+					}
+					else
+					{
+						m_Player.TakeDamage(1);
+						arrow.active = false;
+						std::cout << "Arrow hit player! Health: " << m_Player.health << std::endl;
+					}
+				}
+
+				// Remove arrows that are off-screen
+				if (arrow.IsOffScreen(m_cameraOffset.x, m_window.getSize().x))
+				{
+					arrow.active = false;
+				}
+			}
+
+			// Clean up inactive arrows
+			m_arrows.erase(
+				std::remove_if(m_arrows.begin(), m_arrows.end(),
+					[](const Arrow& arrow) { return !arrow.active; }),
+				m_arrows.end()
+			);
+
+		}
+	}
 }
 
 
@@ -719,72 +726,79 @@ void Game::render()
 	}
 	else
 	{
-		// ---- NORMAL GAME RENDERING ----
 		sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
 		m_Player.sprite->setPosition(renderPos);
 
-		m_dynamicBackground.render(m_window);
-		for (auto& chunk : m_chunks)
+		// ===== HUB vs EXPEDITION =====
+		if (m_isInHub)
 		{
-			chunk.draw(m_window, m_cameraOffset);
+			// USE HUB CLASS TO RENDER
+			m_hub.Render(m_window, m_chunks, m_Player, m_cameraOffset,
+				m_showDebugCollision, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT);
 		}
-
-		if (m_showDebugCollision)
+		else  // EXPEDITION MODE
 		{
-			Debug::DrawChunkCollision(m_window, m_chunks, m_cameraOffset);
-			Debug::DrawPlayerCollision(m_window, m_Player, m_cameraOffset, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT);
-			Debug::DrawAllEnemiesCollision(m_window, m_enemies, m_archers, m_cameraOffset);
-		}
+			// Render background
+			m_dynamicBackground.render(m_window);
 
-		for (auto& enemy : m_enemies)
-		{
-			// Skip rendering dead enemies
-			if (enemy.health <= 0) continue;
+			// Render chunks
+			for (auto& chunk : m_chunks)
+				chunk.draw(m_window, m_cameraOffset);
 
-			// Skip enemies that haven't been fully initialized
-			if (!enemy.sprite) continue;
+			// Debug collision
+			if (m_showDebugCollision)
+			{
+				Debug::DrawChunkCollision(m_window, m_chunks, m_cameraOffset);
+				Debug::DrawPlayerCollision(m_window, m_Player, m_cameraOffset,
+					PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT);
+				Debug::DrawAllEnemiesCollision(m_window, m_enemies, m_archers, m_cameraOffset);
+			}
 
-			sf::Vector2f enemyRenderPos =
-				enemy.pos - m_cameraOffset;
-			enemy.sprite->setPosition(enemyRenderPos);
-			m_window.draw(*enemy.sprite);
-		}
+			// Render ENEMIES
+			for (auto& enemy : m_enemies)
+			{
+				if (enemy.health <= 0) continue;
+				if (!enemy.sprite) continue;
 
-		for (auto& archer : m_archers)
-		{
-			if (archer.health <= 0) continue;
-			if (!archer.sprite) continue;
+				sf::Vector2f enemyRenderPos = enemy.pos - m_cameraOffset;
+				enemy.sprite->setPosition(enemyRenderPos);
+				m_window.draw(*enemy.sprite);
+			}
 
-			sf::Vector2f archerRenderPos = archer.pos - m_cameraOffset;
-			archer.sprite->setPosition(archerRenderPos);
-			m_window.draw(*archer.sprite);
-		}
+			// Render ARCHERS
+			for (auto& archer : m_archers)
+			{
+				if (archer.health <= 0) continue;
+				if (!archer.sprite) continue;
 
-		for (auto& arrow : m_arrows)
-		{
-			if (!arrow.active) continue;
+				sf::Vector2f archerRenderPos = archer.pos - m_cameraOffset;
+				archer.sprite->setPosition(archerRenderPos);
+				m_window.draw(*archer.sprite);
+			}
 
-			sf::Vector2f arrowRenderPos = arrow.getPosition() - m_cameraOffset;
-			arrow.sprite.setPosition(arrowRenderPos);
-			m_window.draw(arrow.sprite);
-		}
+			// Render ARROWS
+			for (auto& arrow : m_arrows)
+			{
+				if (!arrow.active) continue;
 
-		m_window.draw(*m_Player.sprite);
-		m_window.draw(m_bpmText);
+				sf::Vector2f arrowRenderPos = arrow.getPosition() - m_cameraOffset;
+				arrow.sprite.setPosition(arrowRenderPos);
+				m_window.draw(arrow.sprite);
+			}
 
-		if (m_showSkillTree)
-		{
-			sf::RectangleShape overlay(
-				sf::Vector2f(m_window.getSize()));
-			overlay.setFillColor(sf::Color(0, 0, 0, 180));
-			m_window.draw(overlay);
+			// Render player
+			m_window.draw(*m_Player.sprite);
 
-			m_skillTree.Draw(m_window);
+			// Render player UI
+			for (auto& bar : m_Player.HealBar)
+				m_window.draw(bar);
+			for (int i = 0; i < m_Player.HealsCount; i++)
+				m_window.draw(m_Player.HealSphere[i]);
 		}
 	}
-
 	m_window.display();
 }
+
 
 
 /// <summary>
@@ -896,3 +910,5 @@ bool Game::loadChunkAt(int index, float xPosition)
 		<< " (width: " << m_chunks[index].getWidth() << ")" << std::endl;
 	return true;
 }
+
+

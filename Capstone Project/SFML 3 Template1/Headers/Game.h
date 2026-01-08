@@ -32,6 +32,7 @@
 #include "EnemySpawnManager.h"
 #include "Debug.h"
 #include "EnemyCollision.h"
+#include "Hub.h"
 
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
@@ -50,6 +51,9 @@ public:
 	int distance = 0;
 
 private:
+	Hub m_hub; 
+	bool m_isInHub = true;
+
 	DynamicBackground m_dynamicBackground;
 	std::string m_currentTheme = "Forest";
 

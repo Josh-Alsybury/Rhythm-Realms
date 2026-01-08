@@ -46,6 +46,7 @@
     <ClInclude Include="Headers\Game.h" />
     <ClInclude Include="Headers\Npc.h" />
     <ClInclude Include="Headers\Player.h" />
+    <ClInclude Include="Hub.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="SkillTree.h" />
     <ClInclude Include="SpotifyClient.h" />
@@ -63,6 +64,7 @@
     <ClCompile Include="EnemySpawnManager.cpp" />
     <ClCompile Include="EnemyTextures.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Hub.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="Npc.cpp" />

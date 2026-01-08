@@ -168,23 +168,23 @@ void Chunk::buildVertexArray() {
 
 
 // Render chunk with camera offset (single draw call)
-void Chunk::draw(sf::RenderTarget& target, sf::Vector2f cameraOffset) {
-
-    if (m_vertices.getVertexCount() == 0) {
-        return;  // Nothing to draw
-    }
+void Chunk::draw(sf::RenderTarget& target, sf::Vector2f cameraOffset)
+{
+    if (m_vertices.getVertexCount() == 0)
+        return;
 
     sf::RenderStates states;
     states.texture = m_tileset;
 
-    // Round to integer pixel positions
     sf::Vector2f renderPos = m_position - cameraOffset;
     renderPos.x = std::round(renderPos.x);
     renderPos.y = std::round(renderPos.y);
 
     states.transform.translate(renderPos);
+  
     target.draw(m_vertices, states);
 }
+
 
 
 // Clear all tile data and free memory (for chunk recycling)
@@ -243,4 +243,24 @@ void Chunk::drawDebugCollision(sf::RenderTarget& target, sf::Vector2f cameraOffs
             }
         }
     }
+}
+
+void Chunk::setScale(float scale)
+{
+    m_scale = { scale, scale };
+}
+
+void Chunk::setScale(const sf::Vector2f& scale)
+{
+    m_scale = scale;
+}
+
+sf::Vector2f Chunk::getScale() const
+{
+    return m_scale;
+}
+
+float Chunk::getScaledWidth() const
+{
+    return m_width * m_tileSize * m_scale.x;
 }

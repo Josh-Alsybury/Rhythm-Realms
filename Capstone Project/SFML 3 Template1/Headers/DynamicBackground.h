@@ -11,7 +11,8 @@ enum class GameTheme
 {
 	Forest,
 	Medieval,
-	Factory
+	Factory,
+	Hub  
 };
 
 class DynamicBackground
@@ -25,13 +26,14 @@ public:
 	void render(sf::RenderWindow& window);
 	void transitionTo(const std::string& newFolderPath);
 
+	//Static theme helper methods - Get paths for everything based on theme
 	static GameTheme GetThemeFromBPM(float bpm);
 	static std::string GetBackgroundPath(GameTheme theme);
 	static std::string GetTilesetTexturePath(GameTheme theme);
 	static std::string GetTilesetPath(GameTheme theme);
 	static std::vector<std::string> GetChunkPaths(GameTheme theme);
 
-	// NEW: Get/set current theme
+	// Get/set current theme
 	GameTheme getCurrentTheme() const { return m_currentGameTheme; }
 	void setCurrentTheme(GameTheme theme) { m_currentGameTheme = theme; }
 
@@ -44,7 +46,7 @@ private:
 	float m_transitionTimer = 0.0f;
 	float m_transitionDuration = 2.0f;
 
-	// NEW: Track current game theme
+	// Track current game theme
 	GameTheme m_currentGameTheme = GameTheme::Forest;
 };
 #endif

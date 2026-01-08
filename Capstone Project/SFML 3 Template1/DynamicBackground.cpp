@@ -149,6 +149,8 @@ std::string DynamicBackground::GetTilesetTexturePath(GameTheme theme)
         return "ASSETS/Tileset/TilesetMedival.png";
     case GameTheme::Factory:
         return "ASSETS/Tileset/TilesetFactory.png";
+    case GameTheme::Hub:
+        return "ASSETS/Tileset/TilesetHub.png";
     default:
         return "ASSETS/Tileset/Tileset.png";
     }
@@ -164,6 +166,8 @@ std::string DynamicBackground::GetTilesetPath(GameTheme theme)
         return "ASSETS/Tiles/Medival.tsj";
     case GameTheme::Factory:
         return "ASSETS/Tiles/Factory.tsj";
+    case GameTheme::Hub:
+        return "ASSETS/Tiles/Hub.tsj";
     default:
         return "ASSETS/Tiles/Forest.tsj";
     }
@@ -195,6 +199,13 @@ std::vector<std::string> DynamicBackground::GetChunkPaths(GameTheme theme)
             "ASSETS/CHUNKS/Chunk2(Factory).tmj",
             "ASSETS/CHUNKS/Chunk3(Factory).tmj",
             "ASSETS/CHUNKS/Chunk4(Factory).tmj"
+        };
+
+    case GameTheme::Hub:
+        return {
+            "ASSETS/CHUNKS/Chunk1(hub).tmj",
+            "ASSETS/CHUNKS/Chunk2(hub).tmj",
+            "ASSETS/CHUNKS/Chunk3(hub).tmj"
         };
 
     default:
