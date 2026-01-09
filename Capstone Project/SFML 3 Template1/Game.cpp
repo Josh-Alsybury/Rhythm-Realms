@@ -24,6 +24,8 @@ Game::Game() :
 	m_showMenu = true;
 	m_useSpotify = false;
 
+	m_gameView = m_window.getDefaultView();
+
 	if (!g_samuraiTextures.load() || !g_archerTextures.load())
 	{
 		throw std::runtime_error("Failed to load enemy textures");
@@ -81,6 +83,18 @@ void Game::processEvents()
 		if (newEvent->is<sf::Event::Closed>())
 		{
 			m_DELETEexitGame = true;
+		}
+
+		if (m_isInHub && m_hub.IsShopOpen())
+		{
+			m_hub.GetShopUI().handleEvent(*newEvent);
+			// Optionally still allow Esc to quit:
+			if (const auto* key = newEvent->getIf<sf::Event::KeyPressed>())
+			{
+				if (key->code == sf::Keyboard::Key::Escape)
+					m_DELETEexitGame = true;
+			}
+			continue; // skip normal game/menu handling
 		}
 
 		// Keyboard
@@ -193,7 +207,12 @@ void Game::initializeGame()
 	m_arrows.clear();
 
 	// USE HUB CLASS TO LOAD
-	m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth);
+	m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_window.getSize());
+
+	if (!m_useSpotify)
+	{
+		m_bpmStream.setVolume(0.f);
+	}
 }
 
 
@@ -251,7 +270,7 @@ void Game::update(sf::Time t_deltaTime)
 	float dt = t_deltaTime.asSeconds();
 
 	// ===== PLAYER INPUT (always active) =====
-	if (!m_showSkillTree)
+	if (!m_showSkillTree && !(m_isInHub && m_hub.IsShopOpen()))
 	{
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
 			m_Player.moveLeft();
@@ -267,18 +286,49 @@ void Game::update(sf::Time t_deltaTime)
 			m_Player.Heal();
 	}
 
-	// ===== CAMERA (always active) =====
-	float leftMargin = m_screenMargin;
-	float rightMargin = (m_window.getSize().x - 150) - m_screenMargin;
-	float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
+	if (m_isInHub)
+	{
+		float hubWidth = 0.f;
+		for (auto& chunk : m_chunks)
+		{
+			hubWidth += chunk.getWidth();
+		}
 
-	if (playerScreenX > rightMargin)
-		m_cameraOffset.x += playerScreenX - rightMargin;
-	else if (playerScreenX < leftMargin)
-		m_cameraOffset.x -= leftMargin - playerScreenX;
+		m_Player.health = m_Player.MAX_HEALTH;
 
-	m_cameraOffset.x = std::round(m_cameraOffset.x);
-	m_cameraOffset.y = std::round(m_cameraOffset.y);
+		float viewWidth = m_window.getSize().x;
+		float viewHeight = m_window.getSize().y;
+
+		// Clamp to hub boundaries
+		float minCameraX = 0.f;
+		float rightPadding = 450.f; // reduce the right side
+		float maxCameraX = std::max(0.f, hubWidth - viewWidth - rightPadding);
+
+		// Center camera on player with smooth following
+		float targetCameraX = m_Player.pos.x - viewWidth / 1.5f;
+		m_cameraOffset.x += (targetCameraX - m_cameraOffset.x) * dt;
+
+		m_cameraOffset.x = std::clamp(m_cameraOffset.x, minCameraX, maxCameraX);
+
+		// Apply view (no zoom, just positioning)
+		m_gameView.setSize({ viewWidth, viewHeight });
+		m_gameView.setCenter({ m_cameraOffset.x + viewWidth / 2.f,
+			m_cameraOffset.y + viewHeight / 2.f });
+	}
+	else
+	{
+		float leftMargin = m_screenMargin;
+		float rightMargin = (m_window.getSize().x - 150) - m_screenMargin;
+		float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
+
+		if (playerScreenX > rightMargin)
+			m_cameraOffset.x += playerScreenX - rightMargin;
+		else if (playerScreenX < leftMargin)
+			m_cameraOffset.x -= leftMargin - playerScreenX;
+
+		m_cameraOffset.x = std::round(m_cameraOffset.x);
+		m_cameraOffset.y = std::round(m_cameraOffset.y);
+	}
 
 	// ===== PLAYER COLLISION (always active) =====
 	sf::Vector2f oldPos = m_Player.pos;
@@ -346,6 +396,11 @@ void Game::update(sf::Time t_deltaTime)
 
 			m_isInHub = false;
 			m_currentGameTheme = GameTheme::Forest;
+
+			if (!m_useSpotify)
+			{
+				m_bpmStream.setVolume(50.f); // your normal level
+			}
 
 			// Load expedition background
 			m_dynamicBackground.setCurrentTheme(m_currentGameTheme);
@@ -439,6 +494,42 @@ void Game::update(sf::Time t_deltaTime)
 				}
 			}
 		}
+
+		if (m_Player.health <= 0)
+		{
+			// Switch state
+			m_isInHub = true;
+			m_currentGameTheme = GameTheme::Hub;
+
+			if (!m_useSpotify)
+			{
+				m_bpmStream.setVolume(0.f);
+			}
+
+			// Reset camera
+			m_cameraOffset = { 0.f, 0.f };
+			m_gameView = m_window.getDefaultView();
+
+			// Clear expedition entities
+			m_enemies.clear();
+			m_archers.clear();
+			m_arrows.clear();
+
+			// Reload hub tileset
+			std::string tilesetPath =
+				DynamicBackground::GetTilesetTexturePath(GameTheme::Hub);
+			m_tilesetTexture.loadFromFile(tilesetPath);
+			m_tilesetTexture.setSmooth(false);
+
+			// Reload hub chunks
+			m_chunks.clear();
+			m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_window.getSize());
+
+			// Reset player safely
+			m_Player.health = m_Player.MAX_HEALTH;
+			m_Player.velocity = { 0.f, 0.f };
+		}
+
 
 		// Difficulty scaling
 		if (m_currentBPM > 140.f)
@@ -726,6 +817,9 @@ void Game::render()
 	}
 	else
 	{
+		// Apply camera view BEFORE rendering world
+		m_window.setView(m_gameView);
+
 		sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
 		m_Player.sprite->setPosition(renderPos);
 
@@ -752,6 +846,7 @@ void Game::render()
 				Debug::DrawPlayerCollision(m_window, m_Player, m_cameraOffset,
 					PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT);
 				Debug::DrawAllEnemiesCollision(m_window, m_enemies, m_archers, m_cameraOffset);
+
 			}
 
 			// Render ENEMIES
@@ -794,11 +889,25 @@ void Game::render()
 				m_window.draw(bar);
 			for (int i = 0; i < m_Player.HealsCount; i++)
 				m_window.draw(m_Player.HealSphere[i]);
+
+			// Reset view for UI elements (BPM text, skill tree)
+			m_window.setView(m_window.getDefaultView());
+
+			// Draw BPM text
+			m_window.draw(m_bpmText);
+
+			// Skill tree overlay
+			if (m_showSkillTree)
+			{
+				sf::RectangleShape overlay(sf::Vector2f(m_window.getSize()));
+				overlay.setFillColor(sf::Color(0, 0, 0, 180));
+				m_window.draw(overlay);
+				m_skillTree.Draw(m_window);
+			}
 		}
 	}
 	m_window.display();
 }
-
 
 
 /// <summary>

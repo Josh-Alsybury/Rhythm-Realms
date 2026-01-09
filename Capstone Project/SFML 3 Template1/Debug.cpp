@@ -126,3 +126,19 @@ void Debug::DrawChunkCollision(
         chunk.drawDebugCollision(window, cameraOffset);
     }
 }
+
+void Debug::DrawShopSlots(
+    sf::RenderWindow& window,
+    const std::array<ShopSlotUI, 6>& slots)
+{
+    for (const auto& slot : slots)
+    {
+        sf::RectangleShape rect;
+        rect.setSize(slot.area.size);               
+        rect.setPosition(slot.area.position);       
+        rect.setFillColor(sf::Color::Transparent);
+        rect.setOutlineColor(sf::Color::Yellow);
+        rect.setOutlineThickness(2.f);
+        window.draw(rect);
+    }
+}

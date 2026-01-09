@@ -48,6 +48,7 @@
     <ClInclude Include="Headers\Player.h" />
     <ClInclude Include="Hub.h" />
     <ClInclude Include="Menu.h" />
+    <ClInclude Include="ShopUI.h" />
     <ClInclude Include="SkillTree.h" />
     <ClInclude Include="SpotifyClient.h" />
   </ItemGroup>
@@ -69,6 +70,7 @@
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="Npc.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="ShopUI.cpp" />
     <ClCompile Include="SkillTree.cpp" />
     <ClCompile Include="SpotifyClient.cpp" />
   </ItemGroup>

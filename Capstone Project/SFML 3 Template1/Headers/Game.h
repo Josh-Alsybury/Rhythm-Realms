@@ -56,9 +56,10 @@ private:
 
 	DynamicBackground m_dynamicBackground;
 	std::string m_currentTheme = "Forest";
-
 	sf::Vector2f m_cameraOffset{ 100.f, 0.f };
 	const float m_screenMargin = 200.f;
+
+	sf::View m_gameView;
 
 	void processEvents();
 	void processKeys(const std::optional<sf::Event> t_event);

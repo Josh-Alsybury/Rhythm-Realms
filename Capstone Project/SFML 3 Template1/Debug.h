@@ -7,6 +7,7 @@
 #include "Enemy1.h"
 #include "Enemy2.h"
 #include "Chunk.h"
+#include "ShopUI.h" 
 
 class Debug
 {
@@ -41,6 +42,11 @@ public:
         DrawEnemy1Collision(window, enemies, cameraOffset);
         DrawEnemy2Collision(window, archers, cameraOffset);
     }
+
+    // Shop slot visualization
+    static void DrawShopSlots(
+        sf::RenderWindow& window,
+        const std::array<ShopSlotUI, 6>& slots);
 
     // Chunk collision visualization
     static void DrawChunkCollision(

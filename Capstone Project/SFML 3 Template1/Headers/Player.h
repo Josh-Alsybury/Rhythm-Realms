@@ -29,7 +29,7 @@ public:
 
     float speed = 200.f;       
     float maxSpeed = 550.f;    
-    float gravity = 50.f;
+    float gravity = 200.f;
     float Groundlevel = 740.f;
 
     int m_frameNow{ 0 };
