@@ -7,6 +7,8 @@
 #include "Chunk.h"
 #include "Headers/Player.h"
 #include "ShopUI.h"
+#include "Portal.h"
+
 
 class Hub
 {
@@ -18,7 +20,6 @@ public:
         player& player, float& chunkWidth, 
         const sf::Font& font, 
         const sf::Vector2u& windowSize);
-
 
     bool Update(float dt, const player& player);
 
@@ -34,6 +35,9 @@ public:
     bool IsShopOpen() const { return m_shopUI.isOpen(); }
 
     ShopUI& GetShopUI() { return m_shopUI; }
+
+    sf::Texture m_portalTexture;
+    Portal      m_portal;
 
 private:
     bool m_startExpedition;
@@ -65,6 +69,8 @@ private:
             sprite.setPosition(pos);
         }
     };
+
+    std::string getPromptFor(InteractableType t) const;
 
     // Textures
     sf::Texture m_shopTexture;       // Shop building (interactable)

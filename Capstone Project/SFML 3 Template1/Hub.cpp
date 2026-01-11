@@ -62,6 +62,17 @@ void Hub::Load(const sf::Texture& tileset,
     std::cout << "=== HUB LOADED ===" << std::endl;
 }
 
+std::string Hub::getPromptFor(InteractableType t) const
+{
+    switch (t)
+    {
+    case InteractableType::Shop:   return "[E] Shop";
+    case InteractableType::Portal: return "[E] Enter Portal";
+    }
+    return "";
+}
+
+
 void Hub::LoadInteractables()
 {
     // Load shop building texture
@@ -78,9 +89,28 @@ void Hub::LoadInteractables()
         return;
     }
 
+    if (!m_portalTexture.loadFromFile("ASSETS/Portal/Green Portal Sprite Sheet.png"))
+    {
+        std::cerr << "Failed to load Portal texture!" << std::endl;
+        return;
+    }
+
+    m_portal.load(m_portalTexture, { 800.f, 750.f }); // world position
+
     m_interactables.clear();
 
-    // ===== ADD SHOP BUILDING (player interacts with THIS) =====
+    std::cout << "Portal texture size: "
+        << m_portalTexture.getSize().x << " x "
+        << m_portalTexture.getSize().y << "\n";
+
+    sf::Vector2f portalPos = { 800.f, 720.f }; // same as m_portal.load
+    m_portal.load(m_portalTexture, portalPos); // ensure worldPos matches
+
+    m_interactables.emplace_back(m_portalTexture, portalPos, InteractableType::Portal);
+    auto& portalInteract = m_interactables.back();
+    portalInteract.interactionRadius = 80.f;
+    portalInteract.position = portalPos;
+
     sf::Vector2f shopBasePos = { 1100.f, 810.f }; 
 
     m_interactables.emplace_back(m_shopTexture, shopBasePos, InteractableType::Shop);
@@ -141,8 +171,16 @@ bool Hub::Update(float dt, const player& player)
         }
     }
 
+    m_portal.update(dt);
+
     // Update key state
     m_eKeyPressed = eKeyCurrentlyPressed;
+
+    if (m_startExpedition)
+    {
+        m_startExpedition = false; // reset for next time
+        return true;
+    }
 
     return false;
 }
@@ -177,10 +215,10 @@ void Hub::HandleInteraction(InteractableType type)
         break;
 
     case InteractableType::Portal:
-        std::cout << "Starting expedition!" << std::endl;
         m_startExpedition = true;
         break;
     }
+   
 }
 
 void Hub::OpenShop()
@@ -211,6 +249,8 @@ void Hub::Render(
     {
         chunk.draw(window, cameraOffset);
     }
+
+    m_portal.render(window, cameraOffset);
 
     // Render interactables (shop building, etc.)
     RenderInteractables(window, cameraOffset);
@@ -259,12 +299,17 @@ void Hub::Render(
 
         window.setView(oldView);
     }
+
 }
 
 void Hub::RenderInteractables(sf::RenderWindow& window, const sf::Vector2f& cameraOffset)
 {
     for (auto& interactable : m_interactables)
     {
+        // Skip drawing portal sprite, only draw shop
+        if (interactable.type == InteractableType::Portal)
+            continue;
+
         sf::Sprite sprite = interactable.sprite;
         sprite.setPosition(interactable.position - cameraOffset);
         window.draw(sprite);
@@ -277,9 +322,20 @@ void Hub::RenderPrompt(sf::RenderWindow& window, const sf::Vector2f& cameraOffse
 
     auto& interactable = m_interactables[m_nearestInteractableIndex];
 
+    // Set text based on type
+    m_promptText->setString(getPromptFor(interactable.type));
+
+    // Recenter origin because width can change
+    sf::FloatRect bounds = m_promptText->getLocalBounds();
+    m_promptText->setOrigin({
+        bounds.position.x + bounds.size.x / 2.f,
+        bounds.position.y + bounds.size.y
+        });
+
     sf::Vector2f worldPos = interactable.position;
-    worldPos.y -= 90.f; // height above shop
+    worldPos.y -= 90.f;
 
     m_promptText->setPosition(worldPos - cameraOffset);
     window.draw(*m_promptText);
 }
+

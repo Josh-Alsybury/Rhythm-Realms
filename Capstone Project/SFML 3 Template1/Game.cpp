@@ -605,6 +605,13 @@ void Game::update(sf::Time t_deltaTime)
 				if (enemy.sprite)
 					enemy.sprite->setPosition(enemy.pos);
 
+				if (enemy.pos.y > 780.f)
+				{
+					std::cout << "swordsman fell to death" << std::endl;
+					enemy.health = 0;
+					continue;
+				}
+
 				// Player/enemy combat (your existing code)
 				if (m_Player.canDamageEnemy)
 				{
@@ -702,6 +709,13 @@ void Game::update(sf::Time t_deltaTime)
 				// Update sprite position
 				if (archer.sprite)
 					archer.sprite->setPosition(archer.pos);
+
+				if (archer.pos.y > 780)
+				{
+					std::cout << "archer fell to death" << std::endl;
+					archer.health = 0;
+					continue;
+				}
 
 				// Arrow spawning (your existing code)
 				if (archer.state == Enemy2::ArcherState::Attacking
