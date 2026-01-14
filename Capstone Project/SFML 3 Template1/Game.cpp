@@ -172,6 +172,34 @@ void Game::initializeGame()
 	m_bpmText.setPosition(sf::Vector2f(10.f, 75.f));
 	m_bpmText.setString("BPM: 0");
 
+	auto size = m_window.getSize();
+	float totalThickness = 64.f;          // full width of the effect
+	float sliceThickness = totalThickness / BORDER_SLICES;
+
+	for (int i = 0; i < BORDER_SLICES; ++i)
+	{
+		float inset = i * sliceThickness;
+
+		// Top
+		m_screenBorders[0][i].setSize({ static_cast<float>(size.x), sliceThickness });
+		m_screenBorders[0][i].setPosition({ 0.f, inset });
+
+		// Bottom
+		m_screenBorders[1][i].setSize({ static_cast<float>(size.x), sliceThickness });
+		m_screenBorders[1][i].setPosition({ 0.f, size.y - inset - sliceThickness });
+
+		// Left
+		m_screenBorders[2][i].setSize({ sliceThickness, static_cast<float>(size.y) });
+		m_screenBorders[2][i].setPosition({ inset, 0.f });
+
+		// Right
+		m_screenBorders[3][i].setSize({ sliceThickness, static_cast<float>(size.y) });
+		m_screenBorders[3][i].setPosition({ size.x - inset - sliceThickness, 0.f });
+
+		for (int e = 0; e < 4; ++e)
+			m_screenBorders[e][i].setFillColor(sf::Color::Transparent);
+	}
+
 	// Audio setup
 	if (!m_useSpotify)
 	{
@@ -554,6 +582,59 @@ void Game::update(sf::Time t_deltaTime)
 			}
 
 			m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, m_archers, rightmostChunkX, m_chunks);
+			float hpRatio = static_cast<float>(m_Player.health) / m_Player.MAX_HEALTH;
+			hpRatio = std::clamp(hpRatio, 0.f, 1.f);
+
+			// green -> yellow -> red
+			sf::Color baseColor;
+			if (hpRatio > 0.5f)
+			{
+				// green to yellow
+				float t = (hpRatio - 0.5f) / 0.5f; // 0..1
+				baseColor = sf::Color(
+					static_cast<std::uint8_t>(255 * (1.f - t)),  // R: 0->255
+					255,
+					0);
+			}
+			else
+			{
+				// yellow to red
+				float t = hpRatio / 0.5f; // 0..1
+				baseColor = sf::Color(
+					255,
+					static_cast<std::uint8_t>(255 * t),          // G: 0->255
+					0);
+			}
+
+			// ---- BPM-based flash ----
+			// one cycle per beat
+			float bpm = m_currentBPM <= 0.f ? 120.f : m_currentBPM;
+			float beatPeriod = 60.f / bpm;          // seconds per beat
+			m_bpmPhase += dt / beatPeriod;          // dt from earlier
+			m_bpmPhase -= std::floor(m_bpmPhase);   // keep 0..1
+
+			// simple pulse: bright at phase 0, dim at 0.5
+			float pulse = std::sin(m_bpmPhase * 3.1415926f); // 0..1
+
+			for (int edge = 0; edge < 4; ++edge)
+			{
+				for (int i = 0; i < BORDER_SLICES; ++i)
+				{
+					float t = static_cast<float>(i) / (BORDER_SLICES - 1); // 0 = outermost, 1 = innermost
+
+					// Strong at screen edge, fades inward
+					float alphaFactor = 1.f - t;          // 1 -> 0
+					float pulseFactor = 0.4f + 0.6f * pulse; // keep some beat, but not too crazy
+
+					std::uint8_t alpha = static_cast<std::uint8_t>(
+						40 + 150 * alphaFactor * pulseFactor
+						);
+
+					sf::Color c = baseColor;
+					c.a = alpha;
+					m_screenBorders[edge][i].setFillColor(c);
+				}
+			}
 
 			// ========== UPDATE MELEE ENEMIES ==========
 			for (auto& enemy : m_enemies)
@@ -575,7 +656,7 @@ void Game::update(sf::Time t_deltaTime)
 
 				if (wouldFallOffLedge && enemy.velocity.x != 0.f)
 				{
-					// SMART BEHAVIOR: Back away from ledge instead of stopping
+				
 					enemy.pos.x = oldPos.x;
 
 					// Back up slowly (half speed)
@@ -909,6 +990,11 @@ void Game::render()
 
 			// Draw BPM text
 			m_window.draw(m_bpmText);
+
+			for (int edge = 0; edge < 4; ++edge)
+				for (int i = 0; i < BORDER_SLICES; ++i)
+					m_window.draw(m_screenBorders[edge][i]);
+
 
 			// Skill tree overlay
 			if (m_showSkillTree)

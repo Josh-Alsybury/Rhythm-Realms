@@ -113,6 +113,9 @@ private:
 	//std::vector<Npc> m_npcs;
 	sf::Text m_bpmText{ m_jerseyFont };
 	BpmStream m_bpmStream;
+	static constexpr int BORDER_SLICES = 4;
+	sf::RectangleShape m_screenBorders[4][BORDER_SLICES]; // 0=top,1=bottom,2=left,3=right
+	float m_bpmPhase = 0.f;               // for pulsating
 	SkillTree m_skillTree;
 	double m_currentBPM = 0.0;
 	bool m_showSkillTree = false;
