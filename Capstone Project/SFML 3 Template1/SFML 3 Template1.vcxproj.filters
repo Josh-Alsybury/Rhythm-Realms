@@ -108,6 +108,9 @@
     <ClInclude Include="ItemDatabase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ScreenEffect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Background.cpp">
@@ -171,6 +174,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ItemDatabase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ScreenEffect.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -51,6 +51,7 @@
     <ClInclude Include="ItemDatabase.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="Portal.h" />
+    <ClInclude Include="ScreenEffect.h" />
     <ClInclude Include="ShopUI.h" />
     <ClInclude Include="SkillTree.h" />
     <ClInclude Include="SpotifyClient.h" />
@@ -74,6 +75,7 @@
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Portal.cpp" />
+    <ClCompile Include="ScreenEffect.cpp" />
     <ClCompile Include="ShopUI.cpp" />
     <ClCompile Include="SkillTree.cpp" />
     <ClCompile Include="SpotifyClient.cpp" />

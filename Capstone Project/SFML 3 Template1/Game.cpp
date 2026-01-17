@@ -172,34 +172,6 @@ void Game::initializeGame()
 	m_bpmText.setPosition(sf::Vector2f(10.f, 75.f));
 	m_bpmText.setString("BPM: 0");
 
-	auto size = m_window.getSize();
-	float totalThickness = 64.f;          // full width of the effect
-	float sliceThickness = totalThickness / BORDER_SLICES;
-
-	for (int i = 0; i < BORDER_SLICES; ++i)
-	{
-		float inset = i * sliceThickness;
-
-		// Top
-		m_screenBorders[0][i].setSize({ static_cast<float>(size.x), sliceThickness });
-		m_screenBorders[0][i].setPosition({ 0.f, inset });
-
-		// Bottom
-		m_screenBorders[1][i].setSize({ static_cast<float>(size.x), sliceThickness });
-		m_screenBorders[1][i].setPosition({ 0.f, size.y - inset - sliceThickness });
-
-		// Left
-		m_screenBorders[2][i].setSize({ sliceThickness, static_cast<float>(size.y) });
-		m_screenBorders[2][i].setPosition({ inset, 0.f });
-
-		// Right
-		m_screenBorders[3][i].setSize({ sliceThickness, static_cast<float>(size.y) });
-		m_screenBorders[3][i].setPosition({ size.x - inset - sliceThickness, 0.f });
-
-		for (int e = 0; e < 4; ++e)
-			m_screenBorders[e][i].setFillColor(sf::Color::Transparent);
-	}
-
 	// Audio setup
 	if (!m_useSpotify)
 	{
@@ -241,6 +213,11 @@ void Game::initializeGame()
 	{
 		m_bpmStream.setVolume(0.f);
 	}
+
+	m_screenEffect.initialize(m_window.getSize());
+	m_screenEffect.initializeHubLighting(0.75f); // Very dark! (0-1)
+	m_screenEffect.setHubLightParams(420.f, sf::Color(170, 200, 255));
+	m_screenEffect.setMode(ScreenEffect::Mode::Hub);
 }
 
 
@@ -342,6 +319,16 @@ void Game::update(sf::Time t_deltaTime)
 		m_gameView.setSize({ viewWidth, viewHeight });
 		m_gameView.setCenter({ m_cameraOffset.x + viewWidth / 2.f,
 			m_cameraOffset.y + viewHeight / 2.f });
+
+		m_screenEffect.updateHub(dt);
+
+		// Get where the player sprite is ACTUALLY drawn on screen
+		sf::Vector2f playerScreenPos = m_Player.pos - m_cameraOffset;
+
+		// Flip Y for shader coordinates
+		playerScreenPos.y = m_window.getSize().y - playerScreenPos.y;
+
+		m_screenEffect.updatePlayerLight(playerScreenPos);
 	}
 	else
 	{
@@ -424,6 +411,8 @@ void Game::update(sf::Time t_deltaTime)
 
 			m_isInHub = false;
 			m_currentGameTheme = GameTheme::Forest;
+
+			m_screenEffect.setMode(ScreenEffect::Mode::Expedition);
 
 			if (!m_useSpotify)
 			{
@@ -556,6 +545,7 @@ void Game::update(sf::Time t_deltaTime)
 			// Reset player safely
 			m_Player.health = m_Player.MAX_HEALTH;
 			m_Player.velocity = { 0.f, 0.f };
+			m_screenEffect.setMode(ScreenEffect::Mode::Hub);
 		}
 
 
@@ -614,27 +604,9 @@ void Game::update(sf::Time t_deltaTime)
 			m_bpmPhase -= std::floor(m_bpmPhase);   // keep 0..1
 
 			// simple pulse: bright at phase 0, dim at 0.5
-			float pulse = std::sin(m_bpmPhase * 3.1415926f); // 0..1
+			float pulse = std::sin(m_bpmPhase * 3.1415926f); // 0..
 
-			for (int edge = 0; edge < 4; ++edge)
-			{
-				for (int i = 0; i < BORDER_SLICES; ++i)
-				{
-					float t = static_cast<float>(i) / (BORDER_SLICES - 1); // 0 = outermost, 1 = innermost
-
-					// Strong at screen edge, fades inward
-					float alphaFactor = 1.f - t;          // 1 -> 0
-					float pulseFactor = 0.4f + 0.6f * pulse; // keep some beat, but not too crazy
-
-					std::uint8_t alpha = static_cast<std::uint8_t>(
-						40 + 150 * alphaFactor * pulseFactor
-						);
-
-					sf::Color c = baseColor;
-					c.a = alpha;
-					m_screenBorders[edge][i].setFillColor(c);
-				}
-			}
+			m_screenEffect.updateExpedition(hpRatio, pulse);
 
 			// ========== UPDATE MELEE ENEMIES ==========
 			for (auto& enemy : m_enemies)
@@ -912,8 +884,9 @@ void Game::render()
 	}
 	else
 	{
-		// Apply camera view BEFORE rendering world
-		m_window.setView(m_gameView);
+		sf::Vector2f playerScreenPos = m_Player.pos - m_cameraOffset;
+		playerScreenPos.y = m_window.getSize().y - playerScreenPos.y;
+		m_screenEffect.updatePlayerLight(playerScreenPos);
 
 		sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
 		m_Player.sprite->setPosition(renderPos);
@@ -924,6 +897,12 @@ void Game::render()
 			// USE HUB CLASS TO RENDER
 			m_hub.Render(m_window, m_chunks, m_Player, m_cameraOffset,
 				m_showDebugCollision, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_HEIGHT);
+
+			// Switch to default view FIRST
+			m_window.setView(m_window.getDefaultView());
+
+			// THEN render shader (so it uses screen coordinates, not world)
+			m_screenEffect.render(m_window);;
 		}
 		else  // EXPEDITION MODE
 		{
@@ -991,10 +970,7 @@ void Game::render()
 			// Draw BPM text
 			m_window.draw(m_bpmText);
 
-			for (int edge = 0; edge < 4; ++edge)
-				for (int i = 0; i < BORDER_SLICES; ++i)
-					m_window.draw(m_screenBorders[edge][i]);
-
+			m_screenEffect.render(m_window);
 
 			// Skill tree overlay
 			if (m_showSkillTree)

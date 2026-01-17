@@ -33,6 +33,7 @@
 #include "Debug.h"
 #include "EnemyCollision.h"
 #include "Hub.h"
+#include "ScreenEffect.h"
 
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
@@ -60,6 +61,7 @@ private:
 	const float m_screenMargin = 200.f;
 
 	sf::View m_gameView;
+	ScreenEffect m_screenEffect;
 
 	void processEvents();
 	void processKeys(const std::optional<sf::Event> t_event);
@@ -113,8 +115,6 @@ private:
 	//std::vector<Npc> m_npcs;
 	sf::Text m_bpmText{ m_jerseyFont };
 	BpmStream m_bpmStream;
-	static constexpr int BORDER_SLICES = 4;
-	sf::RectangleShape m_screenBorders[4][BORDER_SLICES]; // 0=top,1=bottom,2=left,3=right
 	float m_bpmPhase = 0.f;               // for pulsating
 	SkillTree m_skillTree;
 	double m_currentBPM = 0.0;
