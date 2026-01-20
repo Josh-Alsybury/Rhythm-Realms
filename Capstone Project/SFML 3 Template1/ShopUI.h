@@ -25,11 +25,11 @@ public:
     void handleEvent(const sf::Event& event);
     void update(float dt);
     void render(sf::RenderWindow& window);
+    void generateShopItems();  // Populate slots with random items
 private:
     void layout(const sf::Vector2u& windowSize);
-    void generateShopItems();  // Populate slots with random items
-    sf::Color getRarityColor(ItemRarity rarity) const;
 
+    sf::Color getRarityColor(ItemRarity rarity) const;
     bool m_open = false;
     const sf::Texture* m_cabinetTexture = nullptr;
     const sf::Font* m_font = nullptr;

@@ -3,28 +3,71 @@
 
 SkillTree::SkillTree() : m_skillPoints(0)
 {
-    // Define your skill tree 
+
     m_skills = {
-        {"Extra Heal", "+1 Heal Charge", 1, false, Skill::Type::EXTRA_HEAL},
-        {"Extra Heart", "+1 Max HP", 2, false, Skill::Type::EXTRA_HEALTH},
-        {"Dash", "Quick dash move", 4, false, Skill::Type::DASH},
-        {"Special Attack", "Powerful finisher", 5, false, Skill::Type::SPECIAL_ATTACK}
+        // Survivability branch
+        { "Extra Heal I", "+1 Heal Charge", 1, false, Skill::Branch::Survivability, 0, Skill::Type::EXTRA_HEAL },
+        { "Extra Heal II", "+1 Heal Charge", 2, false, Skill::Branch::Survivability, 1, Skill::Type::EXTRA_HEAL },
+        { "Extra Heart I", "+1 Max HP", 2, false, Skill::Branch::Survivability, 2, Skill::Type::EXTRA_HEALTH },
+        { "Heal on Kill", "Small heal when killing enemies", 3, false, Skill::Branch::Survivability, 3, Skill::Type::HEAL_ON_KILL },
+
+        // Offense branch
+        { "Attack Up I", "+10% damage", 1, false, Skill::Branch::Offense, 0, Skill::Type::CRIT_CHANCE },
+        { "Attack Up II", "+10% damage", 2, false, Skill::Branch::Offense, 1, Skill::Type::CRIT_CHANCE },
+        { "Special Attack", "Unlocks special finisher", 4, false, Skill::Branch::Offense, 2, Skill::Type::SPECIAL_ATTACK },
+        { "Attack Speed", "Faster combo window", 3, false, Skill::Branch::Offense, 3, Skill::Type::ATTACK_SPEED },
+
+        // Mobility branch
+        { "Dash", "Quick dash move", 2, false, Skill::Branch::Mobility, 0, Skill::Type::DASH },
+        { "Dash I-frames", "Dash grants brief invulnerability", 3, false, Skill::Branch::Mobility, 1, Skill::Type::DASH },
+        { "Double Dash", "2 dash charges", 4, false, Skill::Branch::Mobility, 2, Skill::Type::DASH },
+
+        // Rhythm branch (BPM synergy)
+        { "Perfect Guard", "Perfect blocks restore stamina", 2, false, Skill::Branch::Rhythm, 0, Skill::Type::PERFECT_BLOCK_BONUS },
+        { "Beat Fury", "+damage at high BPM", 3, false, Skill::Branch::Rhythm, 1, Skill::Type::BPM_DAMAGE_BOOST },
+        { "Beat Focus", "+defence at low BPM", 3, false, Skill::Branch::Rhythm, 2, Skill::Type::BPM_DEFENCE_BOOST }
     };
 
-    // Create visual nodes
-    for (size_t i = 0; i < m_skills.size(); ++i)
+    // Build branch index lists
+    m_branchIndices.resize(4);
+    for (int i = 0; i < static_cast<int>(m_skills.size()); ++i)
     {
-        sf::CircleShape node(30.f);
-        node.setPosition(sf::Vector2f(100.f + i * 100.f, 400.f));
-        node.setFillColor(sf::Color(100, 100, 100));  // Gray = locked
-        node.setOutlineThickness(3.f);
-        node.setOutlineColor(sf::Color::White);
-        m_nodes.push_back(node);
+        auto b = static_cast<int>(m_skills[i].branch);
+        m_branchIndices[b].push_back(i);
+    }
+
+    // Layout: 4 branches radiating around centre (like your reference)
+    sf::Vector2f center(500.f, 400.f);
+    float branchRadius = 180.f;
+    int branchCount = static_cast<int>(m_branchIndices.size());
+
+    for (int b = 0; b < branchCount; ++b)
+    {
+        float angle = (3.1415926f * 2.f) * (static_cast<float>(b) / branchCount);
+        sf::Vector2f branchDir(std::cos(angle), std::sin(angle));
+
+        const auto& indices = m_branchIndices[b];
+        for (int t = 0; t < static_cast<int>(indices.size()); ++t)
+        {
+            int skillIndex = indices[t];
+            float dist = 80.f + t * 70.f; // move outwards per tier
+            sf::Vector2f pos = center + branchDir * dist;
+
+            sf::CircleShape node(30.f);
+            node.setOrigin({ 30.f, 30.f });
+            node.setPosition(pos);
+            node.setFillColor(sf::Color(100, 100, 100));
+            node.setOutlineThickness(3.f);
+            node.setOutlineColor(sf::Color::White);
+
+            m_nodes.push_back(node);
+        }
     }
 
     if (!m_font.openFromFile("ASSETS/FONTS/Jersey20-Regular.ttf"))
         std::cout << "Failed to load font!\n";
 }
+
 
 void SkillTree::AddSkillPoint()
 {
@@ -34,35 +77,60 @@ void SkillTree::AddSkillPoint()
 
 bool SkillTree::CanUnlock(int skillIndex)
 {
-    if (skillIndex < 0 || skillIndex >= m_skills.size())
+    if (skillIndex < 0 || skillIndex >= static_cast<int>(m_skills.size()))
         return false;
 
-    // Check if already unlocked
-    if (m_skills[skillIndex].unlocked)
+    Skill& s = m_skills[skillIndex];
+    if (s.unlocked || m_skillPoints < s.cost)
         return false;
 
-    // Check if can afford
-    if (m_skillPoints < m_skills[skillIndex].cost)
-        return false;
+    // Find all skills in this branch and sort by tier
+    auto branch = s.branch;
+    std::vector<int> branchSkills;
+    for (int i = 0; i < static_cast<int>(m_skills.size()); ++i)
+        if (m_skills[i].branch == branch)
+            branchSkills.push_back(i);
 
-    // Check if previous skill unlocked 
-    if (skillIndex > 0 && !m_skills[skillIndex - 1].unlocked)
-        return false;
+    // Starting node (tier 0) is always unlockable if you can afford it
+    if (s.tier == 0) return true;
 
-    return true;
+    // Must have at least one skill in this branch with tier < s.tier unlocked
+    bool predecessorUnlocked = false;
+    for (int idx : branchSkills)
+    {
+        if (m_skills[idx].tier == s.tier - 1 && m_skills[idx].unlocked)
+        {
+            predecessorUnlocked = true;
+            break;
+        }
+    }
+
+    return predecessorUnlocked;
 }
+
 
 void SkillTree::UnlockSkill(int skillIndex)
 {
     if (!CanUnlock(skillIndex))
         return;
 
-    m_skills[skillIndex].unlocked = true;
-    m_skillPoints -= m_skills[skillIndex].cost;
-    m_nodes[skillIndex].setFillColor(sf::Color::Green);  // Green = unlocked
+    auto& s = m_skills[skillIndex];
+    s.unlocked = true;
+    m_skillPoints -= s.cost;
 
-    std::cout << "Unlocked: " << m_skills[skillIndex].name << std::endl;
+    sf::Color c;
+    switch (s.branch)
+    {
+    case Skill::Branch::Survivability: c = sf::Color(50, 200, 50); break;
+    case Skill::Branch::Offense:       c = sf::Color(220, 80, 80); break;
+    case Skill::Branch::Mobility:      c = sf::Color(80, 180, 220); break;
+    case Skill::Branch::Rhythm:        c = sf::Color(200, 200, 80); break;
+    }
+    m_nodes[skillIndex].setFillColor(c);
+
+    std::cout << "Unlocked: " << s.name << "\n";
 }
+
 
 bool SkillTree::IsSkillUnlocked(int skillIndex)
 {
@@ -72,17 +140,22 @@ bool SkillTree::IsSkillUnlocked(int skillIndex)
 void SkillTree::Draw(sf::RenderWindow& window)
 {
     // Draw connecting lines
-    for (size_t i = 0; i < m_nodes.size() - 1; ++i)
+    for (int b = 0; b < static_cast<int>(m_branchIndices.size()); ++b)
     {
-        sf::Vector2f start = m_nodes[i].getPosition() + sf::Vector2f(30.f, 30.f);
-        sf::Vector2f end = m_nodes[i + 1].getPosition() + sf::Vector2f(30.f, 30.f);
+        const auto& indices = m_branchIndices[b];
+        for (int i = 0; i + 1 < static_cast<int>(indices.size()); ++i)
+        {
+            int idxA = indices[i];
+            int idxB = indices[i + 1];
+            sf::Vector2f a = m_nodes[idxA].getPosition();
+            sf::Vector2f bPos = m_nodes[idxB].getPosition();
 
-        std::array<sf::Vertex, 2> line = {
-            sf::Vertex{start},
-            sf::Vertex{end}
-        };
-
-        window.draw(line.data(), line.size(), sf::PrimitiveType::Lines);
+            std::array<sf::Vertex, 2> line = {
+                sf::Vertex{a, sf::Color(150,150,150)},
+                sf::Vertex{bPos, sf::Color(150,150,150)}
+            };
+            window.draw(line.data(), line.size(), sf::PrimitiveType::Lines);
+        }
     }
 
     for (size_t i = 0; i < m_nodes.size(); ++i)

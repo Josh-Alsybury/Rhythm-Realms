@@ -215,7 +215,7 @@ void Game::initializeGame()
 	}
 
 	m_screenEffect.initialize(m_window.getSize());
-	m_screenEffect.initializeHubLighting(0.75f); // Very dark! (0-1)
+	m_screenEffect.initializeHubLighting(0.85f); // Very dark! (0-1)
 	m_screenEffect.setHubLightParams(420.f, sf::Color(170, 200, 255));
 	m_screenEffect.setMode(ScreenEffect::Mode::Hub);
 }
@@ -510,6 +510,12 @@ void Game::update(sf::Time t_deltaTime)
 					}
 				}
 			}
+		}
+
+
+		if (m_Player.pos.y > 850)
+		{
+			m_Player.health = 0;
 		}
 
 		if (m_Player.health <= 0)

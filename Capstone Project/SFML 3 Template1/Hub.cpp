@@ -58,7 +58,7 @@ void Hub::Load(const sf::Texture& tileset,
     LoadInteractables();
 
     m_shopUI.load(m_cabinetTexture, font, windowSize);
-
+    m_shopUI.generateShopItems(); // Generate new items each time shop opens
     std::cout << "=== HUB LOADED ===" << std::endl;
 }
 

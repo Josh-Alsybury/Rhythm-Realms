@@ -124,7 +124,7 @@ sf::Color ShopUI::getRarityColor(ItemRarity rarity) const
 void ShopUI::open()
 {
     m_open = true;
-    generateShopItems(); // Generate new items each time shop opens
+
 }
 
 void ShopUI::close()

@@ -5,22 +5,36 @@
 class SkillTree
 {
 public:
-	struct Skill
-	{
-		std::string name;
-		std::string description;
-		int cost;
-		bool unlocked;
+    struct Skill
+    {
+        std::string name;
+        std::string description;
+        int cost = 1;
+        bool unlocked = false;
+
+        enum class Branch {
+            Survivability,
+            Offense,
+            Mobility,
+            Rhythm
+        } branch;
+
+        int tier = 0;          // 0 = starting node in that branch
 
         enum class Type {
-            EXTRA_HEAL,         // +1 heal charge
-            EXTRA_HEALTH,       // +1 max HP
-            DASH,               // Unlock dash move
-            SPECIAL_ATTACK      // Unlock special
-        };
-        Type type;
-
-	};
+            EXTRA_HEAL,
+            EXTRA_HEALTH,
+            DASH,
+            SPECIAL_ATTACK,
+            HEAL_ON_KILL,
+            CRIT_CHANCE,
+            ATTACK_SPEED,
+            PERFECT_BLOCK_BONUS,
+            BPM_DAMAGE_BOOST,
+            BPM_DEFENCE_BOOST
+        } type;
+    };
+    std::vector<std::vector<int>> m_branchIndices;
 
     SkillTree();
 

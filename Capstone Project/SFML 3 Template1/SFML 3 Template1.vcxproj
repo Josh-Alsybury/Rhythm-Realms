@@ -39,6 +39,7 @@
     <ClInclude Include="EnemyCollision.h" />
     <ClInclude Include="EnemySpawnManager.h" />
     <ClInclude Include="EnemyTextures.h" />
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="Headers\Background.h" />
     <ClInclude Include="Headers\BPM.h" />
     <ClInclude Include="Headers\BpmStream.h" />
