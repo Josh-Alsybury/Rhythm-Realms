@@ -240,7 +240,7 @@ void Game::handleWindowResize(sf::Vector2u newSize)
 	m_gameView = view;
 
 	// Reinitialize screen effect for new size
-	m_screenEffect.initialize(newSize);
+	m_screenEffect.onResize(newSize);
 
 	// Reinitialize hub lighting if in hub
 	if (m_isInHub)
@@ -343,7 +343,7 @@ void Game::update(sf::Time t_deltaTime)
 		float maxCameraX = std::max(0.f, hubWidth - viewWidth - rightPadding);
 
 		// Center camera on player with smooth following
-		float targetCameraX = m_Player.pos.x - viewWidth / 1.5f;
+		float targetCameraX = m_Player.pos.x - viewWidth * 0.5f;
 		m_cameraOffset.x += (targetCameraX - m_cameraOffset.x) * dt;
 
 		m_cameraOffset.x = std::clamp(m_cameraOffset.x, minCameraX, maxCameraX);
@@ -355,11 +355,14 @@ void Game::update(sf::Time t_deltaTime)
 
 		m_screenEffect.updateHub(dt);
 
-		// Get where the player sprite is ACTUALLY drawn on screen
-		sf::Vector2f playerScreenPos = m_Player.pos - m_cameraOffset;
+		sf::Vector2i pixelPos =
+			m_window.mapCoordsToPixel(m_Player.pos, m_gameView);
 
-		// Flip Y for shader coordinates
-		playerScreenPos.y = m_windowSize.y - playerScreenPos.y;
+		sf::Vector2f playerScreenPos(
+			static_cast<float>(pixelPos.x),
+			static_cast<float>(m_windowSize.y - pixelPos.y)
+		);
+		
 
 		m_screenEffect.updatePlayerLight(playerScreenPos);
 	}
@@ -927,9 +930,7 @@ void Game::render()
 	}
 	else
 	{
-		sf::Vector2f playerScreenPos = m_Player.pos - m_cameraOffset;
-		playerScreenPos.y = m_windowSize.y - playerScreenPos.y;
-		m_screenEffect.updatePlayerLight(playerScreenPos);
+		m_window.setView(m_gameView);
 
 		sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
 		m_Player.sprite->setPosition(renderPos);
@@ -1080,6 +1081,8 @@ void Game::setupAudio()
 
 void Game::updateChunks()
 {
+	float viewWidth = m_gameView.getSize().x;
+
 	// Find rightmost chunk
 	float rightmostX = -999999.0f;
 	int rightmostIndex = 0;
@@ -1094,9 +1097,8 @@ void Game::updateChunks()
 		}
 	}
 
-	// If player is getting close to the right edge recyle leftmost chunk
-	float rightEdge = rightmostX;
-	if (m_Player.pos.x > rightEdge + 800 - (m_chunkWidth * 2))
+	float scrollTrigger = m_gameView.getCenter().x + viewWidth * 0.6f;
+	if (m_Player.pos.x > scrollTrigger)
 	{
 		// Find leftmost chunk
 		float leftmostX = 999999.0f;

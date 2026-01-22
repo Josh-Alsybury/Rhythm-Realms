@@ -49,6 +49,9 @@ public:
     /// <returns>True if initialization successful</returns>
     bool initialize(sf::Vector2u windowSize);
 
+
+    void onResize(sf::Vector2u newSize);
+
     /// <summary>
     /// Set the current effect mode
     /// </summary>

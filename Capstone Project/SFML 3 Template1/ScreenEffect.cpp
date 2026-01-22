@@ -64,6 +64,13 @@ bool ScreenEffect::initialize(sf::Vector2u windowSize)
     return m_shaderLoaded;
 }
 
+void ScreenEffect::onResize(sf::Vector2u newSize)
+{
+    m_fullscreenQuad.setSize(sf::Vector2f(newSize));
+    m_vignetteShader.setUniform("u_resolution", sf::Vector2f(newSize));
+
+}
+
 bool ScreenEffect::initializeHubLighting(float ambientDarkness)
 {
     if (!sf::Shader::isAvailable())
