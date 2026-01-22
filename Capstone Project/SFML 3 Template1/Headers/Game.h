@@ -55,6 +55,9 @@ private:
 	Hub m_hub; 
 	bool m_isInHub = true;
 
+	sf::Vector2u m_windowSize = { 1000, 800 };
+	void handleWindowResize(sf::Vector2u newSize);
+
 	DynamicBackground m_dynamicBackground;
 	std::string m_currentTheme = "Forest";
 	sf::Vector2f m_cameraOffset{ 100.f, 0.f };

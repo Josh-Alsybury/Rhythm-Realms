@@ -22,6 +22,8 @@ void Hub::Load(const sf::Texture& tileset,
 {
     std::cout << "=== LOADING HUB ===" << std::endl;
 
+    m_windowSize = windowSize;
+
     auto hubChunks = DynamicBackground::GetChunkPaths(GameTheme::Hub);
     chunks.clear();
     chunks.resize(hubChunks.size());
@@ -60,6 +62,12 @@ void Hub::Load(const sf::Texture& tileset,
     m_shopUI.load(m_cabinetTexture, font, windowSize);
     m_shopUI.generateShopItems(); // Generate new items each time shop opens
     std::cout << "=== HUB LOADED ===" << std::endl;
+}
+
+void Hub::HandleResize(const sf::Vector2u& newSize)
+{
+    m_windowSize = newSize;
+    m_shopUI.updateWindowSize(newSize);
 }
 
 std::string Hub::getPromptFor(InteractableType t) const

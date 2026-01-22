@@ -26,6 +26,7 @@ public:
     void update(float dt);
     void render(sf::RenderWindow& window);
     void generateShopItems();  // Populate slots with random items
+    void updateWindowSize(const sf::Vector2u& newSize);
 private:
     void layout(const sf::Vector2u& windowSize);
 

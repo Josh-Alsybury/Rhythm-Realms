@@ -14,6 +14,7 @@ class Hub
 {
 public:
     Hub();
+    void HandleResize(const sf::Vector2u& newSize);
 
     void Load(const sf::Texture& tileset, 
         std::vector<Chunk>& chunks, 
@@ -42,14 +43,13 @@ public:
 private:
     bool m_startExpedition;
     bool m_eKeyPressed = false;
-
     // Interactable types
     enum class InteractableType
     {
         Shop,
         Portal
     };
-
+    sf::Vector2u m_windowSize;
     // Shop UI state
     bool m_shopUIOpen = false;
 

@@ -86,8 +86,6 @@ bool ScreenEffect::initializeHubLighting(float ambientDarkness)
     m_hubAmbientDarkness = std::clamp(ambientDarkness, 0.0f, 1.0f);
 
     // Set resolution uniform
-    auto size = m_fullscreenQuad.getSize();
-    m_hubLightingShader.setUniform("u_resolution", size);
     m_hubLightingShader.setUniform("u_ambientDarkness", m_hubAmbientDarkness);
 
     return true;

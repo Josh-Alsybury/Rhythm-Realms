@@ -16,7 +16,8 @@
 Game::Game() :
 	m_window{ sf::VideoMode{ {1000, 800}, 32 }, "SFML Game 3.0" },
 	m_DELETEexitGame{ false },
-	m_gameTimer(0.f)
+	m_gameTimer(0.f),
+	m_windowSize{ 1000, 800 }
 {
 	setupTexts();
 	m_mainMenu = std::make_unique<Menu>(m_jerseyFont);
@@ -83,6 +84,12 @@ void Game::processEvents()
 		if (newEvent->is<sf::Event::Closed>())
 		{
 			m_DELETEexitGame = true;
+		}
+
+		if (newEvent->is<sf::Event::Resized>())
+		{
+			const auto* resize = newEvent->getIf<sf::Event::Resized>();
+			handleWindowResize({ resize->size.x, resize->size.y });
 		}
 
 		if (m_isInHub && m_hub.IsShopOpen())
@@ -207,19 +214,45 @@ void Game::initializeGame()
 	m_arrows.clear();
 
 	// USE HUB CLASS TO LOAD
-	m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_window.getSize());
+	m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_windowSize);
 
 	if (!m_useSpotify)
 	{
 		m_bpmStream.setVolume(0.f);
 	}
 
-	m_screenEffect.initialize(m_window.getSize());
+	m_screenEffect.initialize(m_windowSize);
 	m_screenEffect.initializeHubLighting(0.85f); // Very dark! (0-1)
 	m_screenEffect.setHubLightParams(420.f, sf::Color(170, 200, 255));
 	m_screenEffect.setMode(ScreenEffect::Mode::Hub);
 }
 
+void Game::handleWindowResize(sf::Vector2u newSize)
+{
+	m_windowSize = newSize;
+
+	// Update default view to match new window size
+	sf::View view(sf::FloatRect({ 0.f, 0.f },  // position
+	{ static_cast<float>(newSize.x), static_cast<float>(newSize.y) }));
+	m_window.setView(view);
+
+	// Update game view
+	m_gameView = view;
+
+	// Reinitialize screen effect for new size
+	m_screenEffect.initialize(newSize);
+
+	// Reinitialize hub lighting if in hub
+	if (m_isInHub)
+	{
+		m_hub.HandleResize(newSize);
+		m_screenEffect.initializeHubLighting(0.85f);
+		m_screenEffect.setHubLightParams(420.f, sf::Color(170, 200, 255));
+		m_screenEffect.setMode(ScreenEffect::Mode::Hub);
+	}
+
+	std::cout << "Window resized to: " << newSize.x << "x" << newSize.y << std::endl;
+}
 
 /// <summary>
 /// deal with key presses from the user
@@ -301,8 +334,8 @@ void Game::update(sf::Time t_deltaTime)
 
 		m_Player.health = m_Player.MAX_HEALTH;
 
-		float viewWidth = m_window.getSize().x;
-		float viewHeight = m_window.getSize().y;
+		float viewWidth = m_windowSize.x;
+		float viewHeight = m_windowSize.y;
 
 		// Clamp to hub boundaries
 		float minCameraX = 0.f;
@@ -326,14 +359,14 @@ void Game::update(sf::Time t_deltaTime)
 		sf::Vector2f playerScreenPos = m_Player.pos - m_cameraOffset;
 
 		// Flip Y for shader coordinates
-		playerScreenPos.y = m_window.getSize().y - playerScreenPos.y;
+		playerScreenPos.y = m_windowSize.y - playerScreenPos.y;
 
 		m_screenEffect.updatePlayerLight(playerScreenPos);
 	}
 	else
 	{
 		float leftMargin = m_screenMargin;
-		float rightMargin = (m_window.getSize().x - 150) - m_screenMargin;
+		float rightMargin = (m_windowSize.x - 150) - m_screenMargin;
 		float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
 
 		if (playerScreenX > rightMargin)
@@ -512,7 +545,6 @@ void Game::update(sf::Time t_deltaTime)
 			}
 		}
 
-
 		if (m_Player.pos.y > 850)
 		{
 			m_Player.health = 0;
@@ -546,7 +578,12 @@ void Game::update(sf::Time t_deltaTime)
 
 			// Reload hub chunks
 			m_chunks.clear();
-			m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_window.getSize());
+			m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_windowSize);
+
+			m_screenEffect.initialize(m_windowSize);
+			m_screenEffect.initializeHubLighting(0.85f);
+			m_screenEffect.setHubLightParams(420.f, sf::Color(170, 200, 255));
+			m_screenEffect.setMode(ScreenEffect::Mode::Hub);
 
 			// Reset player safely
 			m_Player.health = m_Player.MAX_HEALTH;
@@ -840,7 +877,7 @@ void Game::update(sf::Time t_deltaTime)
 				}
 
 				// Remove arrows that are off-screen
-				if (arrow.IsOffScreen(m_cameraOffset.x, m_window.getSize().x))
+				if (arrow.IsOffScreen(m_cameraOffset.x, m_windowSize.x))
 				{
 					arrow.active = false;
 				}
@@ -891,7 +928,7 @@ void Game::render()
 	else
 	{
 		sf::Vector2f playerScreenPos = m_Player.pos - m_cameraOffset;
-		playerScreenPos.y = m_window.getSize().y - playerScreenPos.y;
+		playerScreenPos.y = m_windowSize.y - playerScreenPos.y;
 		m_screenEffect.updatePlayerLight(playerScreenPos);
 
 		sf::Vector2f renderPos = m_Player.pos - m_cameraOffset;
@@ -981,10 +1018,12 @@ void Game::render()
 			// Skill tree overlay
 			if (m_showSkillTree)
 			{
-				sf::RectangleShape overlay(sf::Vector2f(m_window.getSize()));
+				sf::Vector2f windowSizeFloat(
+					static_cast<float>(m_windowSize.x),
+					static_cast<float>(m_windowSize.y)
+				);
+				sf::RectangleShape overlay(windowSizeFloat);
 				overlay.setFillColor(sf::Color(0, 0, 0, 180));
-				m_window.draw(overlay);
-				m_skillTree.Draw(m_window);
 			}
 		}
 	}

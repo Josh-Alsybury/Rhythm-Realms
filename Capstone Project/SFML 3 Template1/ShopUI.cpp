@@ -109,6 +109,14 @@ void ShopUI::generateShopItems()
     }
 }
 
+void ShopUI::updateWindowSize(const sf::Vector2u& newSize)
+{
+    m_overlay.setSize(sf::Vector2f(static_cast<float>(newSize.x),
+        static_cast<float>(newSize.y)));
+    layout(newSize);
+    std::cout << "ShopUI resized to: " << newSize.x << "x" << newSize.y << std::endl;
+}
+
 sf::Color ShopUI::getRarityColor(ItemRarity rarity) const
 {
     switch (rarity)
