@@ -20,13 +20,13 @@ class DynamicBackground
 public:
 	DynamicBackground() = default;
 
-	// Background methods (existing)
+	// Background methods
 	bool loadtheme(const std::string& folderPath);
 	void update(const sf::Vector2f& cameraOffset);
 	void render(sf::RenderWindow& window);
 	void transitionTo(const std::string& newFolderPath);
 
-	//Static theme helper methods - Get paths for everything based on theme
+	//Static theme helper methods Get paths for everything based on theme
 	static GameTheme GetThemeFromBPM(float bpm);
 	static std::string GetBackgroundPath(GameTheme theme);
 	static std::string GetTilesetTexturePath(GameTheme theme);

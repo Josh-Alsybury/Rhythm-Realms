@@ -50,7 +50,7 @@ bool ScreenEffect::initialize(sf::Vector2u windowSize)
                                           static_cast<float>(windowSize.y)));
     m_fullscreenQuad.setPosition({0.0f, 0.0f});
 
-    // Set resolution uniform (constant)
+    // Set resolution uniform
     if (m_shaderLoaded)
     {
         m_vignetteShader.setUniform("u_resolution", 
@@ -125,7 +125,7 @@ void ScreenEffect::setMode(Mode mode)
 
     case Mode::Menu:
         m_activeEffects = static_cast<int>(EffectType::Vignette);
-        m_vignetteColor = sf::Vector3f(0.5f, 0.5f, 0.8f); // Purple-ish
+        m_vignetteColor = sf::Vector3f(0.5f, 0.5f, 0.8f); // Purpleish
         m_vignetteIntensity = 0.4f;
         m_vignetteSoftness = 0.7f;
         m_vignettePulse = 0.5f;
@@ -135,7 +135,7 @@ void ScreenEffect::setMode(Mode mode)
         m_activeEffects = static_cast<int>(EffectType::Vignette);
         m_vignetteColor = sf::Vector3f(1.0f, 0.0f, 0.0f); // Red
         m_vignetteIntensity = 0.7f; // Intense
-        m_vignetteSoftness = 0.3f; // Harder edges
+        m_vignetteSoftness = 0.3f; // 
         m_vignettePulse = 0.8f;
         break;
 
@@ -148,7 +148,6 @@ void ScreenEffect::setMode(Mode mode)
         break;
 
     case Mode::Custom:
-        // Will be set by setCustom()
         break;
     }
 }
@@ -221,8 +220,6 @@ void ScreenEffect::setCustom(sf::Vector3f color, float intensity, float pulse)
     m_vignetteColor = color;
     m_vignetteIntensity = intensity;
     m_vignettePulse = pulse;
-    
-    // Enable vignette for custom mode
     m_activeEffects = static_cast<int>(EffectType::Vignette);
 
     updateVignetteShader();
@@ -272,7 +269,7 @@ void ScreenEffect::render(sf::RenderWindow& window)
         window.draw(m_fullscreenQuad, &m_hubLightingShader);
     }
 
-    // Render vignette (expedition mode)
+    // Render vignette
     if (isEffectEnabled(EffectType::Vignette))
     {
         if (m_shaderLoaded)
@@ -307,18 +304,18 @@ sf::Vector3f ScreenEffect::calculateHealthColor(float healthRatio)
 
     if (healthRatio > 0.5f)
     {
-        // Green to yellow (high health)
+        // Green to yellow 
         float t = (healthRatio - 0.5f) / 0.5f; // 0 to 1
-        color.x = 1.0f - t;  // R: 1 -> 0
+        color.x = 1.0f - t;  // R: 1 -0
         color.y = 1.0f;      // G: 1
         color.z = 0.0f;      // B: 0
     }
     else
     {
-        // Yellow to red (low health)
+        // Yellow to red
         float t = healthRatio / 0.5f; // 0 to 1
         color.x = 1.0f;      // R: 1
-        color.y = t;         // G: 0 -> 1
+        color.y = t;         // G: 0 - 1
         color.z = 0.0f;      // B: 0
     }
 
@@ -327,8 +324,6 @@ sf::Vector3f ScreenEffect::calculateHealthColor(float healthRatio)
 
 void ScreenEffect::renderFallback(sf::RenderWindow& window)
 {
-    // Fallback rendering if shaders not supported
-    // Simple rectangle-based vignette
     auto size = window.getSize();
     
     // Convert color from 0-1 to 0-255

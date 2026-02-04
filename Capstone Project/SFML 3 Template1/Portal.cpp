@@ -25,7 +25,7 @@ void Portal::load(const sf::Texture& tex,
 
     // Always start active instead of closed
     m_state = State::Active;
-    setFrame(0, 0); // first frame of active row (top)
+    setFrame(0, 0); // first frame of active row 
 
     m_sprite->setOrigin({ m_frameWidth / 2.f, m_frameHeight / 2.f });
     m_sprite->setScale({ 2.f, 2.f });
@@ -83,34 +83,33 @@ void Portal::update(float dt)
         case State::Opening:
             if (m_currentFrame >= m_cols)
             {
-                // finished opening -> become active and start looping active row
                 m_state = State::Active;
                 m_currentFrame = 0;
-                setFrame(0, 0); // active row (top)
+                setFrame(0, 0); // active row 
             }
             else
             {
-                setFrame(m_currentFrame, 1); // row 1 = opening
+                setFrame(m_currentFrame, 1);
             }
             break;
 
         case State::Active:
             // loop top row
             m_currentFrame %= m_cols;
-            setFrame(m_currentFrame, 0); // row 0 = active
+            setFrame(m_currentFrame, 0); 
             break;
 
         case State::Closing:
             if (m_currentFrame >= m_cols)
             {
-                // finished closing -> fully closed
+           
                 m_state = State::Closed;
                 m_currentFrame = 0;
-                setFrame(0, 2); // keep first closed frame
+                setFrame(0, 2); 
             }
             else
             {
-                setFrame(m_currentFrame, 2); // row 2 = closing
+                setFrame(m_currentFrame, 2);
             }
             break;
 

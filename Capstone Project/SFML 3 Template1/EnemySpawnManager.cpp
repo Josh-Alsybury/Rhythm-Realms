@@ -37,7 +37,7 @@ void EnemySpawnManager::SetDifficultyMultiplier(float multiplier)
 
 void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
     std::vector<Enemy1>& enemies, std::vector<Enemy2>& archers,
-    float rightmostChunkX, const std::vector<Chunk>& chunks)  // ADDED CHUNKS PARAMETER
+    float rightmostChunkX, const std::vector<Chunk>& chunks) 
 {
     // Update cooldowns
     spawnCooldownTimer -= dt;
@@ -78,7 +78,7 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
             {
                 if (enemy.health <= 0)
                 {
-                    float spawnY = GetSpawnY(spawnX, chunks);  // FIXED: Added both parameters
+                    float spawnY = GetSpawnY(spawnX, chunks);
 
                     enemy.SetupEnemy1();
                     enemy.Reset();
@@ -100,7 +100,7 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
                 auto& newEnemy = enemies.back();
                 newEnemy.SetupEnemy1();
 
-                float spawnY = GetSpawnY(spawnX, chunks);  // FIXED: Added both parameters
+                float spawnY = GetSpawnY(spawnX, chunks);  
                 newEnemy.pos = { spawnX, spawnY };
                 newEnemy.sprite->setPosition(newEnemy.pos);
 
@@ -145,7 +145,7 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
             {
                 if (archer.health <= 0)
                 {
-                    float spawnY = GetSpawnY(archerSpawnX, chunks);  // FIXED: Added both parameters
+                    float spawnY = GetSpawnY(archerSpawnX, chunks);
 
                     archer.SetupEnemy2();
                     archer.Reset();
@@ -168,7 +168,7 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
                 newArcher.SetupEnemy2();
                 newArcher.Reset();
 
-                float spawnY = GetSpawnY(archerSpawnX, chunks);  // FIXED: Added both parameters
+                float spawnY = GetSpawnY(archerSpawnX, chunks);
                 newArcher.pos = { archerSpawnX, spawnY };
                 newArcher.sprite->setPosition(newArcher.pos);
 

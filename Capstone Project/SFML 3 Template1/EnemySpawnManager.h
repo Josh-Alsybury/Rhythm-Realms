@@ -22,7 +22,7 @@ struct EnemySpawnConfig {
         spawnCooldown(cooldown), maxActiveEnemies(maxActive) {}
 };
 
-// Track enemy spawn positions to avoid clustering
+// Track enemy spawn positions to avoid clustering ( sort of works its awkward tho )
 struct SpawnRecord {
     float worldX;
     float timestamp;
@@ -38,14 +38,14 @@ public:
     void SetSpawnConfig(const EnemySpawnConfig& config);
     void SetDifficultyMultiplier(float multiplier); // Increases spawn rate over time
 
-    // Update and spawn logic - NOW INCLUDES CHUNKS PARAMETER
+    // Update and spawn logic
     void Update(float dt, sf::Vector2f playerPos,
         std::vector<Enemy1>& enemies,
         std::vector<Enemy2>& archers,
         float rightmostChunkX,
-        const std::vector<Chunk>& chunks);  // ADDED THIS PARAMETER
+        const std::vector<Chunk>& chunks);
 
-    // Manual spawn (for special events)
+    // Manual spawn
     void ForceSpawn(sf::Vector2f position, std::vector<Enemy1>& enemies);
     void ForceSpawnArcher(sf::Vector2f position, std::vector<Enemy2>& archers);
 
@@ -75,14 +75,14 @@ private:
     std::uniform_real_distribution<float> distanceDistribution;
     std::uniform_real_distribution<float> heightVariation;
 
-    // Spawn history (prevent clustering)
+    // Spawn history
     std::vector<SpawnRecord> recentSpawns;
     const float MIN_SPAWN_SEPARATION = 300.f;
     const float SPAWN_RECORD_DURATION = 10.f; // Keep records for 10 seconds
 
     // Helper methods
     float GetRandomSpawnX(sf::Vector2f playerPos, float rightmostChunkX);
-    float GetSpawnY(float spawnX, const std::vector<Chunk>& chunks);  // Ground level with slight variation
+    float GetSpawnY(float spawnX, const std::vector<Chunk>& chunks);  
     bool CanSpawnAt(float worldX);
     void CleanupOldSpawnRecords(float currentTime);
     bool IsValidSpawnPosition(float worldX, float playerX, float rightmostChunkX);

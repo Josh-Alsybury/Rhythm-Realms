@@ -7,7 +7,7 @@
 class EnemyCollision
 {
 public:
-    // Generic enemy hitbox size (adjust per enemy type if needed)
+    // Generic enemy hitbox size 
     static constexpr float ENEMY_HITBOX_WIDTH = 40.f;
     static constexpr float ENEMY_HITBOX_HEIGHT = 60.f;
 
@@ -22,7 +22,7 @@ public:
         float oldX = pos.x;
         pos.x += velocity.x * dt;
 
-        // Check collision at new position (SFML 3 syntax)
+        // Check collision at new position 
         sf::FloatRect hitbox(
             sf::Vector2f(pos.x - ENEMY_HITBOX_WIDTH / 2.f, pos.y - ENEMY_HITBOX_HEIGHT / 2.f),
             sf::Vector2f(ENEMY_HITBOX_WIDTH, ENEMY_HITBOX_HEIGHT)
@@ -36,7 +36,7 @@ public:
                 chunk.isSolidTileWorld(hitbox.position.x, hitbox.position.y + hitbox.size.y) ||
                 chunk.isSolidTileWorld(hitbox.position.x + hitbox.size.x, hitbox.position.y + hitbox.size.y))
             {
-                // Hit wall - revert position and stop
+                // Hit wall  revert position and stop
                 pos.x = oldX;
                 velocity.x = 0.f;
                 return true; // Collision detected
@@ -46,7 +46,7 @@ public:
         return false; // No collision
     }
 
-    // Apply gravity and snap to ground (prevents floating, makes enemies fall)
+    // Apply gravity and snap to ground 
     static bool ApplyGravityAndGround(
         sf::Vector2f& pos,
         sf::Vector2f& velocity,
@@ -84,7 +84,7 @@ public:
             {
                 if (chunk.isSolidTileWorld(pos.x, feetY))
                 {
-                    // Hit ground - snap to it
+                    // Hit ground
                     float chunkRelativeY = feetY - chunk.getPosition().y;
                     int tileY = static_cast<int>(chunkRelativeY / 32.f);
                     pos.y = chunk.getPosition().y + (tileY * 32.f) - 30.f;
@@ -96,36 +96,6 @@ public:
         }
 
         return onGround;
-    }
-
-    // OLD VERSION - Keep for compatibility but mark as deprecated
-    static bool SnapToGround(
-        sf::Vector2f& pos,
-        const std::vector<Chunk>& chunks,
-        float maxFallDistance = 100.f)
-    {
-        float feetY = pos.y + 30.f; // Feet position (adjust based on sprite)
-        float checkY = feetY;
-
-        // Check downward for ground
-        for (float offset = 0.f; offset <= maxFallDistance; offset += 4.f)
-        {
-            checkY = feetY + offset;
-
-            // Check if we hit solid ground
-            for (auto& chunk : chunks)
-            {
-                if (chunk.isSolidTileWorld(pos.x, checkY))
-                {
-                    // Found ground! Snap to it
-                    int tileY = static_cast<int>((checkY - chunk.getPosition().y) / 32.f);
-                    pos.y = chunk.getPosition().y + (tileY * 32.f) - 30.f;
-                    return true; // Grounded
-                }
-            }
-        }
-
-        return false; // No ground found (falling into void)
     }
 
     // Check if position is valid spawn location (on solid ground)
@@ -172,8 +142,8 @@ public:
         return startY;
     }
 
-    // Check if enemy is about to walk off a ledge (for AI)
-    // Returns TRUE if there's a LEDGE (no ground ahead)
+    // Check if enemy is about to walk off a ledge 
+    // Returns TRUE if there's a LEDGE
     static bool IsLedgeAhead(
         sf::Vector2f pos,
         bool facingRight,
@@ -200,11 +170,11 @@ public:
             if (foundGround) break;
         }
 
-        // Return TRUE if NO ground found (ledge detected!)
+        // Return TRUE if NO ground found
         return !foundGround;
     }
 
-    // ENHANCED: Check and stop at ledge (call this in AI)
+    // ENHANCED: Check and stop at ledge
     static bool CheckAndStopAtLedge(
         sf::Vector2f pos,
         bool facingRight,

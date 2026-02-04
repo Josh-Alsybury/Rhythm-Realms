@@ -167,7 +167,7 @@ void Chunk::buildVertexArray() {
 }
 
 
-// Render chunk with camera offset (single draw call)
+// Render chunk with camera offset
 void Chunk::draw(sf::RenderTarget& target, sf::Vector2f cameraOffset)
 {
     if (m_vertices.getVertexCount() == 0)

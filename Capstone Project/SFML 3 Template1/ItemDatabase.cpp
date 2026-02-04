@@ -37,9 +37,8 @@ ItemRarity ItemDatabase::pickRarityWeighted() const
     int total = 0;
     for (int w : weights) total += w;
 
-    // uniform int [0, total-1]
     std::uniform_int_distribution<int> dist(0, total - 1);
-    int r = dist(const_cast<std::mt19937&>(m_rng)); // rng is mutable in effect
+    int r = dist(const_cast<std::mt19937&>(m_rng)); 
 
     int acc = 0;
     for (int i = 0; i < 4; ++i)

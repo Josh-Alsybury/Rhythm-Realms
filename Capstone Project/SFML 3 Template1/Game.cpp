@@ -95,7 +95,6 @@ void Game::processEvents()
 		if (m_isInHub && m_hub.IsShopOpen())
 		{
 			m_hub.GetShopUI().handleEvent(*newEvent);
-			// Optionally still allow Esc to quit:
 			if (const auto* key = newEvent->getIf<sf::Event::KeyPressed>())
 			{
 				if (key->code == sf::Keyboard::Key::Escape)
@@ -208,7 +207,7 @@ void Game::initializeGame()
 	}
 	m_tilesetTexture.setSmooth(false);
 
-	// Clear enemies (no enemies in hub)
+	// Clear enemies 
 	m_enemies.clear();
 	m_archers.clear();
 	m_arrows.clear();
@@ -307,7 +306,7 @@ void Game::update(sf::Time t_deltaTime)
 	checkKeyboardState();
 	float dt = t_deltaTime.asSeconds();
 
-	// ===== PLAYER INPUT (always active) =====
+	// ===== PLAYER INPUT =====
 	if (!m_showSkillTree && !(m_isInHub && m_hub.IsShopOpen()))
 	{
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
@@ -348,7 +347,7 @@ void Game::update(sf::Time t_deltaTime)
 
 		m_cameraOffset.x = std::clamp(m_cameraOffset.x, minCameraX, maxCameraX);
 
-		// Apply view (no zoom, just positioning)
+		// Apply view 
 		m_gameView.setSize({ viewWidth, viewHeight });
 		m_gameView.setCenter({ m_cameraOffset.x + viewWidth / 2.f,
 			m_cameraOffset.y + viewHeight / 2.f });
@@ -452,7 +451,7 @@ void Game::update(sf::Time t_deltaTime)
 
 			if (!m_useSpotify)
 			{
-				m_bpmStream.setVolume(50.f); // your normal level
+				m_bpmStream.setVolume(50.f); // normal level
 			}
 
 			// Load expedition background
@@ -608,7 +607,7 @@ void Game::update(sf::Time t_deltaTime)
 
 		if (!m_showSkillTree)
 		{
-			// Enemy spawning + updates (all your existing code)
+			// Enemy spawning + updates 
 			float rightmostChunkX = -999999.0f;
 			for (const auto& chunk : m_chunks)
 			{
@@ -650,7 +649,7 @@ void Game::update(sf::Time t_deltaTime)
 			m_bpmPhase -= std::floor(m_bpmPhase);   // keep 0..1
 
 			// simple pulse: bright at phase 0, dim at 0.5
-			float pulse = std::sin(m_bpmPhase * 3.1415926f); // 0..
+			float pulse = std::sin(m_bpmPhase * 3.1415926f); // 0
 
 			m_screenEffect.updateExpedition(hpRatio, pulse);
 
@@ -677,14 +676,14 @@ void Game::update(sf::Time t_deltaTime)
 				
 					enemy.pos.x = oldPos.x;
 
-					// Back up slowly (half speed)
+					// Back up slowly (half speed) doesnt work
 					float backupDir = enemy.facingRight ? -1.f : 1.f;
 					enemy.velocity.x = backupDir * enemy.speed * 0.5f;
 					enemy.pos.x += enemy.velocity.x * dt;
 
 				}
 
-				// Apply horizontal collision
+				// Apply horizontal collision ( doesnt work great for walls )
 				EnemyCollision::CheckHorizontalCollision(
 					enemy.pos,
 					enemy.velocity,
@@ -692,7 +691,7 @@ void Game::update(sf::Time t_deltaTime)
 					dt
 				);
 
-				// Snap to ground (prevents floating)
+				// Snap to ground (prevents floating) same issue with player where it cause bouncing 
 				EnemyCollision::ApplyGravityAndGround(
 					enemy.pos,
 					enemy.velocity,  // Pass velocity so gravity can update it
@@ -711,7 +710,7 @@ void Game::update(sf::Time t_deltaTime)
 					continue;
 				}
 
-				// Player/enemy combat (your existing code)
+				// Player/enemy combat
 				if (m_Player.canDamageEnemy)
 				{
 					float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
@@ -945,7 +944,7 @@ void Game::render()
 			// Switch to default view FIRST
 			m_window.setView(m_window.getDefaultView());
 
-			// THEN render shader (so it uses screen coordinates, not world)
+			// render shader (so it uses screen coordinates, not world)
 			m_screenEffect.render(m_window);;
 		}
 		else  // EXPEDITION MODE
@@ -1073,7 +1072,7 @@ void Game::setupAudio()
 	}
 
 	std::cout << "Audio loaded successfully, starting playback..." << std::endl;
-	m_bpmStream.setVolume(50.0f); // You had it at 0, probably want to hear it!
+	m_bpmStream.setVolume(50.0f); // music volume
 	m_bpmStream.play();
 
 }
@@ -1125,6 +1124,7 @@ void Game::updateChunks()
 bool Game::loadChunkAt(int index, float xPosition)
 {
 	std::vector<std::string> chunkPaths = DynamicBackground::GetChunkPaths(m_currentGameTheme);
+	// current theme for chunk
 
 	int randomIndex = rand() % chunkPaths.size();
 	std::string chunkFile = chunkPaths[randomIndex];

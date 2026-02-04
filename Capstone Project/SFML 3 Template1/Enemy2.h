@@ -8,7 +8,7 @@
 class Enemy2
 {
 public:
-    // State enum (renamed from EnemyState to ArcherState for clarity)
+    // State enum 
     enum class ArcherState
     {
         Idle,
@@ -17,7 +17,7 @@ public:
         Defending
     };
 
-    // Animation type enum - safe from vector reallocation
+    // Animation type enum 
     enum class AnimationType
     {
         Idle,
@@ -26,7 +26,7 @@ public:
         Defending
     };
 
-    // Animation struct - MUST be declared before any methods use it
+    // Animation struct 
     struct Animation {
         sf::Texture* texture = nullptr;
         int frameCount = 0;
@@ -50,7 +50,7 @@ public:
     ArcherState state;
     bool isInitialised = false;
 
-    // --- Animations (stored as members, accessed safely via GetCurrentAnimation()) ---
+    // --- Animations
     Animation idleAnim;
     Animation runAnim;
     Animation attackAnim;
@@ -95,9 +95,9 @@ private:
     void AIBehavior(sf::Vector2f playerPos, float dt);
     void SetState(ArcherState newState);
 
-    // HELPER: Get animation safely (prevents vector reallocation issues)
+    // HELPER: Get animation safely 
     Animation* GetCurrentAnimation();
 
-    // Current animation TYPE (not pointer!)
+    // Current animation TYPE
     AnimationType currentAnimType;
 };

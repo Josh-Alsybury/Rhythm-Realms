@@ -18,13 +18,12 @@ Enemy1::Enemy1()
     , attackHitboxRadius(50.f)
     , currentAnimType(AnimationType::Idle)
 {
-    // Zero-initialize ALL animation structures
+    
     idleAnim = {};
     runAnim = {};
     attackAnim = {};
     defendAnim = {};
 
-    // Explicitly set texture pointers to nullptr
     idleAnim.texture = nullptr;
     runAnim.texture = nullptr;
     attackAnim.texture = nullptr;
@@ -45,7 +44,6 @@ void Enemy1::Reset()
     m_frameNow = 0;
     m_frameCount = 0.f;
 
-    // Reset to idle animation
     currentAnimType = AnimationType::Idle;
     sprite->setTexture(*idleAnim.texture, false);
     sprite->setTextureRect({ {0, 0}, {96, 64} });
@@ -55,7 +53,6 @@ void Enemy1::Reset()
 
 void Enemy1::SetupEnemy1()
 {
-    // Setup animations with CORRECT frame widths
     idleAnim.texture = &g_samuraiTextures.idle;
     idleAnim.frameCount = 5;
     idleAnim.frameWidth = 96;
@@ -76,7 +73,6 @@ void Enemy1::SetupEnemy1()
     defendAnim.frameWidth = 96;
     defendAnim.frameHeight = 64;
 
-    // Create sprite with correct initial frame
     sprite = std::make_unique<sf::Sprite>(*idleAnim.texture);
     sprite->setScale(sf::Vector2f(2.2f, 2.2f));
     sprite->setPosition(pos);
@@ -85,7 +81,7 @@ void Enemy1::SetupEnemy1()
 
     currentAnimType = AnimationType::Idle;
 
-    // Detection/Attack circles
+
     detectionRadius.setRadius(detectionRange);
     detectionRadius.setOrigin(sf::Vector2f(detectionRange, detectionRange));
     detectionRadius.setFillColor(sf::Color(255, 255, 0, 40));
@@ -101,7 +97,7 @@ void Enemy1::SetupEnemy1()
     UpdateHealthBar();
 }
 
-// HELPER: Get current animation by type (safe from vector reallocation)
+
 Enemy1::Animation* Enemy1::GetCurrentAnimation()
 {
     switch (currentAnimType)
@@ -116,7 +112,7 @@ Enemy1::Animation* Enemy1::GetCurrentAnimation()
 
 void Enemy1::Update(float dt, sf::Vector2f playerPos)
 {
-    // Get animation fresh every frame - safe from reallocation
+    // Get animation fresh every frame
     Enemy1::Animation* anim = GetCurrentAnimation();
 
     assert(sprite && anim && anim->texture);
@@ -261,7 +257,7 @@ void Enemy1::AIBehavior(sf::Vector2f playerPos, float dt)
         SetState(EnemyState::Attacking);
         velocity.x = 0.f;
     }
-    // --- COOLDOWN (stay in idle, don't chase) ---
+    // --- COOLDOWN --
     else if (distance <= attackRange && attackCooldown > 0.f)
     {
         SetState(EnemyState::Idle);

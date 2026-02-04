@@ -82,7 +82,7 @@ private:
 	const float PLAYER_HITBOX_HEIGHT = 40.f;
 
 	sf::Font m_jerseyFont;
-	std::unique_ptr<Menu> m_mainMenu;  // Use pointer so we can initialize after font loads
+	std::unique_ptr<Menu> m_mainMenu;  // Use pointer so initialize after font loads
 	bool m_showMenu = true;
 	Menu::AudioSource m_selectedAudioSource = Menu::AudioSource::None;
 
@@ -118,7 +118,7 @@ private:
 	//std::vector<Npc> m_npcs;
 	sf::Text m_bpmText{ m_jerseyFont };
 	BpmStream m_bpmStream;
-	float m_bpmPhase = 0.f;               // for pulsating
+	float m_bpmPhase = 0.f; // for pulsating
 	SkillTree m_skillTree;
 	double m_currentBPM = 0.0;
 	bool m_showSkillTree = false;

@@ -9,8 +9,8 @@ struct ShopSlotUI {
     sf::FloatRect area;
     sf::RectangleShape bg;
     std::optional<Item> item;  // The item in this slot
-    std::optional<sf::Text> nameText;  // Make optional for SFML 3 compatibility
-    std::optional<sf::Text> costText;  // Make optional for SFML 3 compatibility
+    std::optional<sf::Text> nameText;  
+    std::optional<sf::Text> costText;  
 };
 
 class ShopUI {

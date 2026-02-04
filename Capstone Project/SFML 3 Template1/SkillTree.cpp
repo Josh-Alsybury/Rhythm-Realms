@@ -22,7 +22,7 @@ SkillTree::SkillTree() : m_skillPoints(0)
         { "Dash I-frames", "Dash grants brief invulnerability", 3, false, Skill::Branch::Mobility, 1, Skill::Type::DASH },
         { "Double Dash", "2 dash charges", 4, false, Skill::Branch::Mobility, 2, Skill::Type::DASH },
 
-        // Rhythm branch (BPM synergy)
+        // Rhythm branch 
         { "Perfect Guard", "Perfect blocks restore stamina", 2, false, Skill::Branch::Rhythm, 0, Skill::Type::PERFECT_BLOCK_BONUS },
         { "Beat Fury", "+damage at high BPM", 3, false, Skill::Branch::Rhythm, 1, Skill::Type::BPM_DAMAGE_BOOST },
         { "Beat Focus", "+defence at low BPM", 3, false, Skill::Branch::Rhythm, 2, Skill::Type::BPM_DEFENCE_BOOST }
@@ -36,7 +36,7 @@ SkillTree::SkillTree() : m_skillPoints(0)
         m_branchIndices[b].push_back(i);
     }
 
-    // Layout: 4 branches radiating around centre (like your reference)
+    // Layout: 4 branches radiating around centre
     sf::Vector2f center(500.f, 400.f);
     float branchRadius = 180.f;
     int branchCount = static_cast<int>(m_branchIndices.size());
@@ -94,7 +94,6 @@ bool SkillTree::CanUnlock(int skillIndex)
     // Starting node (tier 0) is always unlockable if you can afford it
     if (s.tier == 0) return true;
 
-    // Must have at least one skill in this branch with tier < s.tier unlocked
     bool predecessorUnlocked = false;
     for (int idx : branchSkills)
     {
@@ -239,7 +238,7 @@ void SkillTree::DrawTooltip(sf::RenderWindow& window, int skillIndex, sf::Vector
     tooltipBox.setPosition(tooltipPos);
     window.draw(tooltipBox);
 
-    // Skill name (title)
+    // Skill name 
     sf::Text nameText{ m_font };
     nameText.setFont(m_font);
     nameText.setString(skill.name);
@@ -257,7 +256,7 @@ void SkillTree::DrawTooltip(sf::RenderWindow& window, int skillIndex, sf::Vector
     descText.setPosition(tooltipPos + sf::Vector2f(10.f, 40.f));
     window.draw(descText);
 
-    // Cost (or "UNLOCED")
+    // Cost
     sf::Text costText{ m_font };
     costText.setFont(m_font);
     if (skill.unlocked)

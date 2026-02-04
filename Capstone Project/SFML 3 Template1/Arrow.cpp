@@ -7,9 +7,9 @@ bool Arrow::textureLoaded = false;
 Arrow::Arrow(sf::Vector2f startPos, bool movingRight, float speed)
     : position(startPos)
     , active(true)
-    , sprite(arrowTexture)  // SFML 3.0: Must initialize sprite with texture
+    , sprite(arrowTexture)  
 {
-    // Load texture once (static)
+    // Load texture once
     if (!textureLoaded)
     {
         if (arrowTexture.loadFromFile("ASSETS/IMAGES/Samurai_Archer/ARROW.png"))

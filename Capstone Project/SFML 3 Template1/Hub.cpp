@@ -90,7 +90,7 @@ void Hub::LoadInteractables()
         return;
     }
 
-    // Load cabinet UI texture (this is the overlay)
+    // Load cabinet UI texture
     if (!m_cabinetTexture.loadFromFile("ASSETS/Shop/Cabinets.png"))
     {
         std::cerr << "Failed to load cabinet texture!" << std::endl;
@@ -111,7 +111,7 @@ void Hub::LoadInteractables()
         << m_portalTexture.getSize().x << " x "
         << m_portalTexture.getSize().y << "\n";
 
-    sf::Vector2f portalPos = { 800.f, 720.f }; // same as m_portal.load
+    sf::Vector2f portalPos = { 800.f, 720.f }; 
     m_portal.load(m_portalTexture, portalPos); // ensure worldPos matches
 
     m_interactables.emplace_back(m_portalTexture, portalPos, InteractableType::Portal);
@@ -144,13 +144,12 @@ void Hub::LoadInteractables()
 
 bool Hub::Update(float dt, const player& player)
 {
-    // Check if E key is currently pressed
     bool eKeyCurrentlyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E);
 
     // If shop UI is open
     if (m_shopUIOpen)
     {
-        // Detect E key press (not hold) - close shop
+        // Detect E key press
         if (eKeyCurrentlyPressed && !m_eKeyPressed)
         {
             CloseShop();
@@ -169,7 +168,7 @@ bool Hub::Update(float dt, const player& player)
     // Check proximity to interactables
     CheckProximity(player);
 
-    // Handle E key interaction (detect press, not hold)
+    // Handle E key interactio
     if (eKeyCurrentlyPressed && !m_eKeyPressed)
     {
         if (m_nearestInteractableIndex >= 0)
@@ -260,7 +259,7 @@ void Hub::Render(
 
     m_portal.render(window, cameraOffset);
 
-    // Render interactables (shop building, etc.)
+    // Render interactables
     RenderInteractables(window, cameraOffset);
 
     // Debug collision
@@ -292,7 +291,7 @@ void Hub::Render(
     for (int i = 0; i < player.HealsCount; i++)
         window.draw(player.HealSphere[i]);
 
-    // Render interaction prompt (if not in shop AND near something)
+    // Render interaction prompt
     if (!m_shopUIOpen && m_nearestInteractableIndex >= 0)
     {
         RenderPrompt(window, cameraOffset);
@@ -314,7 +313,7 @@ void Hub::RenderInteractables(sf::RenderWindow& window, const sf::Vector2f& came
 {
     for (auto& interactable : m_interactables)
     {
-        // Skip drawing portal sprite, only draw shop
+        // Skip drawing portal sprite
         if (interactable.type == InteractableType::Portal)
             continue;
 

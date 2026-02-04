@@ -161,7 +161,7 @@ void ShopUI::handleEvent(const sf::Event& event)
                     // Highlight selected slot
                     slot.bg.setOutlineColor(sf::Color::Yellow);
 
-                    // Print item info (later: actual purchase logic)
+                    // Print item info
                     if (slot.item.has_value()) {
                         std::cout << "Clicked: " << slot.item->name
                             << " - Cost: " << slot.item->cost << "g" << std::endl;
@@ -179,7 +179,6 @@ void ShopUI::handleEvent(const sf::Event& event)
 void ShopUI::update(float)
 {
     if (!m_open) return;
-    // Could add hover effects, animations, etc.
 }
 
 void ShopUI::render(sf::RenderWindow& window)
@@ -202,7 +201,5 @@ void ShopUI::render(sf::RenderWindow& window)
                 window.draw(*slot.costText);
         }
     }
-
-    // Optional: Keep debug visualization
     Debug::DrawShopSlots(window, m_slots);
 }

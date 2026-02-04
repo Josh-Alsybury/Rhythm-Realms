@@ -54,7 +54,7 @@ void Enemy2::Reset()
 
 void Enemy2::SetupEnemy2()
 {
-    // Use GLOBAL textures (already loaded in Game constructor)
+    // Use GLOBAL textures 
     idleAnim.texture = &g_archerTextures.idle;
     idleAnim.frameCount = 14;
     idleAnim.frameWidth = 96;
@@ -155,7 +155,7 @@ void Enemy2::Update(float dt, sf::Vector2f playerPos)
         hasDealtDamage = false;
         canDamagePlayer = false;
     }
-    // Archer damages during specific attack frames (when arrow is released)
+    // Archer damages during specific attack frames 
     else if (m_frameNow >= 7 && m_frameNow <= 9 && !hasDealtDamage)
     {
         canDamagePlayer = true;
@@ -228,7 +228,7 @@ void Enemy2::SetState(ArcherState newState)
 
     state = newState;
 
-    // Update animation TYPE (not pointer!)
+    // Update animation TYPE
     AnimationType newAnimType = AnimationType::Idle;
     switch (state)
     {

@@ -15,7 +15,7 @@ public:
         Defending
     };
 
-    // Animation type enum - safe from vector reallocation
+    // Animation type enum safe from vector reallocation
     enum class AnimationType {
         Idle,
         Running,
@@ -97,7 +97,7 @@ public:
     void TakeDamage(int amount);
 
 private:
-    // HELPER: Get animation safely (prevents vector reallocation issues)
+    // Get animation safely (prevents vector reallocation issues this was a major issue with out std optional when recycling)
     Animation* GetCurrentAnimation();
 
     // Current animation TYPE (not pointer!)
