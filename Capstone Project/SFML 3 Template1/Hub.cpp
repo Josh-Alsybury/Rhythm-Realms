@@ -285,12 +285,6 @@ void Hub::Render(
     // Render player
     window.draw(*player.sprite);
 
-    // Render player UI
-    for (auto& bar : player.HealBar)
-        window.draw(bar);
-    for (int i = 0; i < player.HealsCount; i++)
-        window.draw(player.HealSphere[i]);
-
     // Render interaction prompt
     if (!m_shopUIOpen && m_nearestInteractableIndex >= 0)
     {

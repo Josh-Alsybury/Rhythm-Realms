@@ -34,6 +34,8 @@
 #include "EnemyCollision.h"
 #include "Hub.h"
 #include "ScreenEffect.h"
+#include "BpmCombatSystem.h"
+#include <memory>
 
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
@@ -52,6 +54,7 @@ public:
 	int distance = 0;
 
 private:
+	std::unique_ptr<BPMCombatSystem> m_bpmCombat;
 	Hub m_hub; 
 	bool m_isInHub = true;
 

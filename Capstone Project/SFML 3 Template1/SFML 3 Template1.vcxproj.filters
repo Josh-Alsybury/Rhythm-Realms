@@ -22,6 +22,36 @@
     <Filter Include="Resource Files\AUDIO">
       <UniqueIdentifier>{8389fe52-4a9c-4634-a901-3339082136d3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\enemy">
+      <UniqueIdentifier>{3c30c898-0023-43ec-8af2-824511e58f4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Enemy">
+      <UniqueIdentifier>{17203180-d140-4c69-b4c8-fb03dd3c755a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Bpm">
+      <UniqueIdentifier>{5ce1cd7a-d27b-4f39-8d96-695f922bf537}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Bpm">
+      <UniqueIdentifier>{66f1805b-7ae8-4887-b9a8-3816cabbfe1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\World">
+      <UniqueIdentifier>{403c62d4-eda7-4eaf-9a1f-7061da22f3a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\World">
+      <UniqueIdentifier>{3ee84434-0296-44bf-b3ce-6af52534d278}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Hub">
+      <UniqueIdentifier>{e8d4f962-abb4-4976-88e0-4f2a79c583f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Hub">
+      <UniqueIdentifier>{6bb1152b-3a0b-4799-bb45-58e6cca091da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shop">
+      <UniqueIdentifier>{8a6e4698-d221-450a-ab78-cdd3db1840ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shop">
+      <UniqueIdentifier>{bcea9bb8-083c-463c-90c1-b164dd42c3d6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Image Include="ASSETS\IMAGES\SFML-LOGO.png">
@@ -39,18 +69,6 @@
     </Media>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Headers\Background.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Headers\BPM.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Headers\BpmStream.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Headers\DynamicBackground.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -60,74 +78,74 @@
     <ClInclude Include="Headers\Player.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Enemy1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SkillTree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Chunk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Menu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SpotifyClient.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EnemySpawnManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EnemyTextures.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Debug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Enemy2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Arrow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EnemyCollision.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hub.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ShopUI.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Portal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Item.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ItemDatabase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ScreenEffect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Constants.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Arrow.h">
+      <Filter>Header Files\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="Enemy2.h">
+      <Filter>Header Files\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="Enemy1.h">
+      <Filter>Header Files\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="EnemySpawnManager.h">
+      <Filter>Header Files\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="EnemyTextures.h">
+      <Filter>Header Files\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="EnemyCollision.h">
+      <Filter>Header Files\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\BPM.h">
+      <Filter>Header Files\Bpm</Filter>
+    </ClInclude>
+    <ClInclude Include="SpotifyClient.h">
+      <Filter>Header Files\Bpm</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\BpmStream.h">
+      <Filter>Header Files\Bpm</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Background.h">
+      <Filter>Header Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Chunk.h">
+      <Filter>Header Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\DynamicBackground.h">
+      <Filter>Header Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Portal.h">
+      <Filter>Header Files\Hub</Filter>
+    </ClInclude>
+    <ClInclude Include="Hub.h">
+      <Filter>Header Files\Hub</Filter>
+    </ClInclude>
+    <ClInclude Include="ShopUI.h">
+      <Filter>Header Files\Shop</Filter>
+    </ClInclude>
+    <ClInclude Include="Item.h">
+      <Filter>Header Files\Shop</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemDatabase.h">
+      <Filter>Header Files\Shop</Filter>
+    </ClInclude>
+    <ClInclude Include="Bpmcombatsystem.h">
+      <Filter>Header Files\Bpm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Background.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BPM.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BpmStream.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DynamicBackground.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -137,50 +155,62 @@
     <ClCompile Include="Player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Enemy1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="SkillTree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Chunk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Menu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SpotifyClient.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EnemySpawnManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EnemyTextures.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Debug.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Enemy2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Arrow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Hub.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ShopUI.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Portal.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ItemDatabase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ScreenEffect.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Arrow.cpp">
+      <Filter>Source Files\enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="Enemy1.cpp">
+      <Filter>Source Files\enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="Enemy2.cpp">
+      <Filter>Source Files\enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="EnemySpawnManager.cpp">
+      <Filter>Source Files\enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="EnemyTextures.cpp">
+      <Filter>Source Files\enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="BPM.cpp">
+      <Filter>Source Files\Bpm</Filter>
+    </ClCompile>
+    <ClCompile Include="BpmStream.cpp">
+      <Filter>Source Files\Bpm</Filter>
+    </ClCompile>
+    <ClCompile Include="SpotifyClient.cpp">
+      <Filter>Source Files\Bpm</Filter>
+    </ClCompile>
+    <ClCompile Include="DynamicBackground.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Background.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Chunk.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Hub.cpp">
+      <Filter>Source Files\Hub</Filter>
+    </ClCompile>
+    <ClCompile Include="Portal.cpp">
+      <Filter>Source Files\Hub</Filter>
+    </ClCompile>
+    <ClCompile Include="ShopUI.cpp">
+      <Filter>Source Files\Shop</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemDatabase.cpp">
+      <Filter>Source Files\Shop</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

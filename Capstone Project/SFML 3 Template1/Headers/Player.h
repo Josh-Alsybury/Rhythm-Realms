@@ -1,6 +1,8 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
+class BPMCombatSystem;
+
 #pragma once
 class player
 {
@@ -185,6 +187,13 @@ public:
 
     PlayerState state = PlayerState::Idle;
 
+    BPMCombatSystem* m_bpmSystem = nullptr;
+    float m_lastAttackTiming = 1.0f;
+    float m_lastBlockTiming = 0.5f;
+    bool m_isPerfectParry = false;
+
+    void setBPMSystem(BPMCombatSystem* system);
+
     void Jump();
     void moveLeft();
     void moveRight();
@@ -199,6 +208,7 @@ public:
     void HealCall();
     void TakeDamage(int amount);
     void Update(float dt); 
+
 };
 
 

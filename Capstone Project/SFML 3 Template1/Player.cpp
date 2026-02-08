@@ -1,4 +1,5 @@
 ﻿#include "Headers/Player.h"
+#include "BPMCombatSystem.h"
 #include <cmath> 
 
 
@@ -40,16 +41,37 @@ void player::moveRight()
 
 void player::Attack()
 {
-    if(velocity.x == 0.f)
+    if (velocity.x == 0.f)
         if (isOnGround)
+        {
             isAttack = true;
+
+            if (m_bpmSystem)
+            {
+                BPMCombatSystem::HitTiming timing = m_bpmSystem->evaluateHitTiming();
+                m_lastAttackTiming = m_bpmSystem->registerHit(timing);
+            }
+        }
 }
 
 void player::Defend()
 {
     if (velocity.x == 0.f)
         if (isOnGround)
+        {
             isDefend = true;
+
+            if (m_bpmSystem)
+            {
+                BPMCombatSystem::HitTiming timing = m_bpmSystem->evaluateHitTiming();
+                m_lastBlockTiming = m_bpmSystem->registerBlock(timing);
+
+                if (m_lastBlockTiming == -1.0f)
+                {
+                    m_isPerfectParry = true;
+                }
+            }
+        }
 }
 
 void player::Heal()
@@ -262,3 +284,7 @@ void player::Update(float dt)
     sprite->setPosition(pos);
 }
 
+void player::setBPMSystem(BPMCombatSystem* system)
+{
+    m_bpmSystem = system;
+}

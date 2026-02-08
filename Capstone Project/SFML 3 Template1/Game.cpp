@@ -178,6 +178,10 @@ void Game::initializeGame()
 	m_bpmText.setPosition(sf::Vector2f(10.f, 75.f));
 	m_bpmText.setString("BPM: 0");
 
+	m_bpmCombat = std::make_unique<BPMCombatSystem>(m_jerseyFont);
+	m_bpmCombat->setBPM(120.0f);
+	m_Player.setBPMSystem(m_bpmCombat.get());
+
 	// Audio setup
 	if (!m_useSpotify)
 	{
@@ -305,6 +309,12 @@ void Game::update(sf::Time t_deltaTime)
 {
 	checkKeyboardState();
 	float dt = t_deltaTime.asSeconds();
+
+	if (m_bpmCombat)
+	{
+		m_bpmCombat->setBPM(m_currentBPM);
+		m_bpmCombat->update(dt);
+	}
 
 	// ===== PLAYER INPUT =====
 	if (!m_showSkillTree && !(m_isInHub && m_hub.IsShopOpen()))
@@ -478,6 +488,8 @@ void Game::update(sf::Time t_deltaTime)
 			// Position player
 			m_Player.pos.x = 500.f;
 			m_Player.pos.y = 500.f;
+			m_Player.velocity = { 0.f, 0.f };
+			m_cameraOffset = { 0.f, 0.f };
 
 			// Spawn enemies
 			m_enemySpawnManager.ForceSpawn({ 850.f, 746.f }, m_enemies);
@@ -944,7 +956,12 @@ void Game::render()
 			// Switch to default view FIRST
 			m_window.setView(m_window.getDefaultView());
 
-			// render shader (so it uses screen coordinates, not world)
+			for (auto& bar : m_Player.HealBar)
+				m_window.draw(bar);
+			for (int i = 0; i < m_Player.HealsCount; i++)
+				m_window.draw(m_Player.HealSphere[i]);
+
+			// render shader 
 			m_screenEffect.render(m_window);;
 		}
 		else  // EXPEDITION MODE
@@ -1001,14 +1018,13 @@ void Game::render()
 			// Render player
 			m_window.draw(*m_Player.sprite);
 
-			// Render player UI
+			// Reset view for UI elements (BPM text, skill tree)
+			m_window.setView(m_window.getDefaultView());
+
 			for (auto& bar : m_Player.HealBar)
 				m_window.draw(bar);
 			for (int i = 0; i < m_Player.HealsCount; i++)
 				m_window.draw(m_Player.HealSphere[i]);
-
-			// Reset view for UI elements (BPM text, skill tree)
-			m_window.setView(m_window.getDefaultView());
 
 			// Draw BPM text
 			m_window.draw(m_bpmText);
