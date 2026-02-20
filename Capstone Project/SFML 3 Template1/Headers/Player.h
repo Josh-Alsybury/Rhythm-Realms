@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include "BPMCombatSystem.h"
 
 class BPMCombatSystem;
 
@@ -192,6 +193,13 @@ public:
     float m_lastBlockTiming = 0.5f;
     bool m_isPerfectParry = false;
 
+    std::optional<sf::Text> m_timingFeedbackText;  
+    float m_timingFeedbackTimer = 0.f;
+    const float TIMING_FEEDBACK_DURATION = 1.0f;
+
+    sf::CircleShape m_beatIndicator;
+    float m_beatPulseScale = 1.0f;
+
     void setBPMSystem(BPMCombatSystem* system);
 
     void Jump();
@@ -208,6 +216,15 @@ public:
     void HealCall();
     void TakeDamage(int amount);
     void Update(float dt); 
+
+    void InitializeBPMVisuals(const sf::Font& font);
+    void UpdateBPMVisuals(float dt, float currentBPM);
+    void RenderBPMVisualsAtPosition(sf::RenderWindow& window, const sf::Vector2f& screenPos);
+    void RenderBPMVisuals(sf::RenderWindow& window);
+
+
+private:
+    void ShowTimingFeedback(BPMCombatSystem::HitTiming timing);
 
 };
 

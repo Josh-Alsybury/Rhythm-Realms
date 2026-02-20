@@ -1,5 +1,4 @@
 ﻿#include "Headers/Player.h"
-#include "BPMCombatSystem.h"
 #include <cmath> 
 
 
@@ -50,6 +49,8 @@ void player::Attack()
             {
                 BPMCombatSystem::HitTiming timing = m_bpmSystem->evaluateHitTiming();
                 m_lastAttackTiming = m_bpmSystem->registerHit(timing);
+
+                ShowTimingFeedback(timing);
             }
         }
 }
@@ -70,6 +71,7 @@ void player::Defend()
                 {
                     m_isPerfectParry = true;
                 }
+                ShowTimingFeedback(timing);
             }
         }
 }
@@ -282,6 +284,106 @@ void player::Update(float dt)
 
 
     sprite->setPosition(pos);
+}
+
+void player::InitializeBPMVisuals(const sf::Font& font)
+{
+    
+    m_timingFeedbackText.emplace(font, "", 32);
+    m_timingFeedbackText->setFillColor(sf::Color::Yellow);
+    m_timingFeedbackText->setOutlineColor(sf::Color::Black);
+    m_timingFeedbackText->setOutlineThickness(2.f);
+
+    //  beat indicator 
+    m_beatIndicator.setRadius(20.f);
+    m_beatIndicator.setFillColor(sf::Color(255, 255, 255, 100));
+    m_beatIndicator.setOutlineColor(sf::Color::Cyan);
+    m_beatIndicator.setOutlineThickness(3.f);
+    m_beatIndicator.setOrigin({ 20.f, 20.f });
+}
+
+void player::UpdateBPMVisuals(float dt, float currentBPM)
+{
+    // Timing feedback timer
+    if (m_timingFeedbackTimer > 0.f)
+    {
+        m_timingFeedbackTimer -= dt;
+
+        // Fade out effect
+        if (m_timingFeedbackText.has_value())
+        {
+            float alpha = std::clamp(m_timingFeedbackTimer / TIMING_FEEDBACK_DURATION, 0.f, 1.f);
+            sf::Color color = m_timingFeedbackText->getFillColor();
+            color.a = static_cast<std::uint8_t>(255 * alpha);  // SFML 3.0: std::uint8_t
+            m_timingFeedbackText->setFillColor(color);
+        }
+    }
+
+    // Beat pulse animation
+    if (currentBPM > 0.f)
+    {
+        float beatPeriod = 60.f / currentBPM;
+        static float beatTimer = 0.f;
+        beatTimer += dt;
+
+        if (beatTimer >= beatPeriod)
+        {
+            beatTimer -= beatPeriod;
+            m_beatPulseScale = 1.5f;  // Pulse on beat
+        }
+
+        m_beatPulseScale += (1.0f - m_beatPulseScale) * 8.0f * dt;
+    }
+}
+
+void player::RenderBPMVisualsAtPosition(sf::RenderWindow& window, const sf::Vector2f& screenPos)
+{
+    // Beat indicator 
+    m_beatIndicator.setPosition({ screenPos.x, screenPos.y - 80.f });
+    m_beatIndicator.setScale({ m_beatPulseScale, m_beatPulseScale });
+    window.draw(m_beatIndicator);
+
+    // Timing feedback text
+    if (m_timingFeedbackTimer > 0.f && m_timingFeedbackText.has_value())
+    {
+        sf::FloatRect textBounds = m_timingFeedbackText->getLocalBounds();
+        m_timingFeedbackText->setPosition({
+            screenPos.x - textBounds.size.x / 2.f,
+            screenPos.y - 120.f
+            });
+        window.draw(*m_timingFeedbackText);
+    }
+}
+
+// Keep the old method for backwards compatibility
+void player::RenderBPMVisuals(sf::RenderWindow& window)
+{
+    RenderBPMVisualsAtPosition(window, pos);
+}
+
+void player::ShowTimingFeedback(BPMCombatSystem::HitTiming timing)
+{
+    if (!m_timingFeedbackText.has_value()) return;
+
+    m_timingFeedbackTimer = TIMING_FEEDBACK_DURATION;
+
+    switch (timing)
+    {
+    case BPMCombatSystem::HitTiming::Perfect:
+        m_timingFeedbackText->setString("PERFECT!");
+        m_timingFeedbackText->setFillColor(sf::Color(255, 215, 0));  // Gold
+        break;
+
+    case BPMCombatSystem::HitTiming::Good:
+        m_timingFeedbackText->setString("Good");
+        m_timingFeedbackText->setFillColor(sf::Color::Green);
+        break;
+
+    case BPMCombatSystem::HitTiming::Miss:
+        m_timingFeedbackText->setString("Miss");
+        m_timingFeedbackText->setFillColor(sf::Color::Red);
+        break;
+    }
 }
 
 void player::setBPMSystem(BPMCombatSystem* system)

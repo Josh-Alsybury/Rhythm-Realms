@@ -182,6 +182,8 @@ void Game::initializeGame()
 	m_bpmCombat->setBPM(120.0f);
 	m_Player.setBPMSystem(m_bpmCombat.get());
 
+	m_Player.InitializeBPMVisuals(m_jerseyFont);
+
 	// Audio setup
 	if (!m_useSpotify)
 	{
@@ -519,6 +521,8 @@ void Game::update(sf::Time t_deltaTime)
 
 		if (rawBPM <= 0.f)
 			rawBPM = m_currentBPM;
+
+		m_Player.UpdateBPMVisuals(dt, m_currentBPM);
 
 		static float smoothedBPM = 120.f;
 		smoothedBPM += (rawBPM - smoothedBPM) * 0.05f;
@@ -1017,6 +1021,8 @@ void Game::render()
 
 			// Render player
 			m_window.draw(*m_Player.sprite);
+			sf::Vector2f playerScreenPos = m_Player.pos - m_cameraOffset;
+			m_Player.RenderBPMVisualsAtPosition(m_window, playerScreenPos);
 
 			// Reset view for UI elements (BPM text, skill tree)
 			m_window.setView(m_window.getDefaultView());
