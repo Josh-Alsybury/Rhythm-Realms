@@ -9,13 +9,13 @@ Enemy2::Enemy2()
     , facingRight(false)
     , m_frameCount(0.f)
     , m_frameNow(0)
-    , m_framePlus(0.05f)
+    , m_framePlus(0.08f)  
     , speed(80.f)
     , detectionRange(600.f)     
-    , attackRange(550.f)         
-    , preferredDistance(420.f)
+    , attackRange(400.f)         
+    , preferredDistance(250.f)   
     , attackCooldown(0.f)
-    , attackCooldownTime(2.5f)
+    , attackCooldownTime(1.5f)  
     , canDamagePlayer(false)
     , hasDealtDamage(false)
     , attackHitboxRadius(50.f)
@@ -101,6 +101,23 @@ void Enemy2::SetupEnemy2()
     detectionRadius.setRadius(detectionRange); 
     attackRadius.setRadius(attackRange);
 
+
+    if (!m_stunStarsInitialized)
+    {
+        m_stunStars.clear();
+        for (int i = 0; i < 3; ++i)
+        {
+            sf::CircleShape star;
+            star.setRadius(5.f);
+            star.setFillColor(sf::Color::Yellow);
+            star.setOutlineColor(sf::Color::Black);
+            star.setOutlineThickness(1.f);
+            star.setOrigin({ 5.f, 5.f });
+            m_stunStars.push_back(star);
+        }
+        m_stunStarsInitialized = true;
+    }
+
     UpdateHealthBar();
 }
 
@@ -122,16 +139,41 @@ void Enemy2::Update(float dt, sf::Vector2f playerPos)
     if (!isInitialised)
         return;
 
-    // Get animation fresh every frame - safe from reallocation
+    // Get animation fresh every frame
     Enemy2::Animation* anim = GetCurrentAnimation();
-
     assert(sprite && anim && anim->texture);
 
+    // CHECK STUN FIRST BEFORE AI OR MOVEMENT
+    if (m_isStunned)
+    {
+        m_stunTimer -= dt;
+        if (m_stunTimer <= 0.f)
+        {
+            m_isStunned = false;
+        }
+
+        // aply knockback velocity during stun
+        pos.x += velocity.x * dt;
+        velocity.x *= 0.9f;
+
+        // Update stun stars
+        float bounceOffset = std::sin(m_stunTimer * 10.f) * 5.f;
+        for (int i = 0; i < m_stunStars.size(); ++i)
+        {
+            float xOffset = (i - 1) * 20.f;
+            m_stunStars[i].setPosition({ pos.x + xOffset, pos.y - 120.f + bounceOffset });
+        }
+
+        sprite->setPosition(pos);
+        AnimateEnemy(dt);
+        UpdateHealthBar();
+        return;
+    }
+
+    // NORMAL UPDATE 
     AIBehavior(playerPos, dt);
-
-    pos += velocity * dt;
+    pos += velocity * dt;  
     sprite->setPosition(pos);
-
     AnimateEnemy(dt);
     UpdateHealthBar();
 
@@ -145,7 +187,7 @@ void Enemy2::Update(float dt, sf::Vector2f playerPos)
             SetState(ArcherState::Idle);
     }
 
-    // Archer shoots arrow - hitbox is in front of them
+    // Archer shoots arrow hitbox is in front of them
     float hitboxOffsetX = facingRight ? 80.f : -80.f;
     attackHitbox.setPosition(sf::Vector2f(pos.x + hitboxOffsetX, pos.y));
 
@@ -268,15 +310,15 @@ void Enemy2::AIBehavior(sf::Vector2f playerPos, float dt)
     if (attackCooldown > 0.f)
         attackCooldown -= dt;
 
-    // --- TOO CLOSE - BACK AWAY ---
-    if (distance < preferredDistance - 80.f)
+    // --- TOO CLOSE - BACK AWAY (closer threshold) ---
+    if (distance < preferredDistance - 50.f)  // CHANGED: 50px buffer (was 80)
     {
         SetState(ArcherState::Running);
-        float dir = facingRight ? -1.f : 1.f;  // Move away from player
-        velocity.x = dir * speed;
+        float dir = facingRight ? -1.f : 1.f;  
+        velocity.x = dir * speed * 1.2f;
     }
-    // --- GOOD RANGE - ATTACK ---
-    else if (distance <= attackRange && distance >= preferredDistance - 20.f && attackCooldown <= 0.f)
+    // --- GOOD RANGE - ATTACK (more flexible window) ---
+    else if (distance <= attackRange && distance >= preferredDistance - 100.f && attackCooldown <= 0.f)
     {
         SetState(ArcherState::Attacking);
         velocity.x = 0.f;  // Stand still to shoot
@@ -284,8 +326,27 @@ void Enemy2::AIBehavior(sf::Vector2f playerPos, float dt)
     // --- COOLDOWN - MAINTAIN DISTANCE ---
     else if (distance <= attackRange && attackCooldown > 0.f)
     {
-        SetState(ArcherState::Idle);
-        velocity.x = 0.f;
+        
+        if (distance < preferredDistance - 30.f)
+        {
+            // Too close, back up
+            SetState(ArcherState::Running);
+            float dir = facingRight ? -1.f : 1.f;
+            velocity.x = dir * speed * 0.5f;
+        }
+        else if (distance > preferredDistance + 50.f)
+        {
+            // Too far, move closer
+            SetState(ArcherState::Running);
+            float dir = facingRight ? 1.f : -1.f;
+            velocity.x = dir * speed * 0.5f;
+        }
+        else
+        {
+            // Good distance, stay still
+            SetState(ArcherState::Idle);
+            velocity.x = 0.f;
+        }
     }
     // --- TOO FAR - MOVE CLOSER ---
     else if (distance > attackRange && distance <= detectionRange)
@@ -320,6 +381,10 @@ void Enemy2::TakeDamage(int amount)
 {
     health -= amount;
     if (health < 0) health = 0;
+
+    m_isStunned = true;
+    m_stunTimer = STUN_DURATION;
+
     UpdateHealthBar();
 }
 

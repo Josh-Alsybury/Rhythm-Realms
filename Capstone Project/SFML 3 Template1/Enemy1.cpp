@@ -94,6 +94,22 @@ void Enemy1::SetupEnemy1()
     attackHitbox.setOrigin(sf::Vector2f(attackHitboxRadius, attackHitboxRadius));
     attackHitbox.setFillColor(sf::Color(255, 0, 0, 80));
 
+    if (!m_stunStarsInitialized)
+    {
+        m_stunStars.clear();
+        for (int i = 0; i < 3; ++i)
+        {
+            sf::CircleShape star;
+            star.setRadius(5.f);
+            star.setFillColor(sf::Color::Yellow);
+            star.setOutlineColor(sf::Color::Black);
+            star.setOutlineThickness(1.f);
+            star.setOrigin({ 5.f, 5.f });
+            m_stunStars.push_back(star);
+        }
+        m_stunStarsInitialized = true;
+    }
+
     UpdateHealthBar();
 }
 
@@ -114,13 +130,39 @@ void Enemy1::Update(float dt, sf::Vector2f playerPos)
 {
     // Get animation fresh every frame
     Enemy1::Animation* anim = GetCurrentAnimation();
-
     assert(sprite && anim && anim->texture);
 
+    // CHECK STUN FIRST  BEFORE AI OR MOVEMENT
+    if (m_isStunned)
+    {
+        m_stunTimer -= dt;
+        if (m_stunTimer <= 0.f)
+        {
+            m_isStunned = false;
+        }
+
+        //apply knockback velocity during stun
+        float knockbackDir = facingRight ? -1.f : 1.f;
+        pos.x += knockbackDir * 150.f * dt;  
+
+        // Update stun star
+        float bounceOffset = std::sin(m_stunTimer * 10.f) * 5.f;
+        for (int i = 0; i < m_stunStars.size(); ++i)
+        {
+            float xOffset = (i - 1) * 20.f;
+            m_stunStars[i].setPosition({ pos.x + xOffset, pos.y - 110.f + bounceOffset });
+        }
+
+        sprite->setPosition(pos);
+        AnimateEnemy(dt);
+        UpdateHealthBar();
+        return;  
+    }
+
+    // NORMAL UPDATE
     AIBehavior(playerPos, dt);
-
-    pos += velocity * dt;
-
+    pos += velocity * dt;  // Normal AI movement
+    sprite->setPosition(pos);
     AnimateEnemy(dt);
     UpdateHealthBar();
 
@@ -298,6 +340,10 @@ void Enemy1::TakeDamage(int amount)
 {
     health -= amount;
     if (health < 0) health = 0;
+
+    m_isStunned = true;
+    m_stunTimer = STUN_DURATION;
+
     UpdateHealthBar();
 }
 

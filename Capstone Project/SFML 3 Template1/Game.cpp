@@ -727,7 +727,7 @@ void Game::update(sf::Time t_deltaTime)
 				}
 
 				// Player/enemy combat
-				if (m_Player.canDamageEnemy)
+				if (m_Player.canDamageEnemy && !m_Player.m_hasHitThisAttack)
 				{
 					float dx = m_Player.attackHitbox.getPosition().x - enemy.pos.x;
 					float dy = m_Player.attackHitbox.getPosition().y - enemy.pos.y;
@@ -735,8 +735,15 @@ void Game::update(sf::Time t_deltaTime)
 
 					if (distance < m_Player.attackHitboxRadius + 30.f)
 					{
-						enemy.TakeDamage(1);
-						m_Player.canDamageEnemy = false;
+						int damage = static_cast<int>(1 * m_Player.m_damageMultiplier);
+						enemy.TakeDamage(damage);
+
+						float knockbackDir = m_Player.facingRight ? 1.f : -1.f;
+						enemy.velocity.x = knockbackDir * 200.f;
+
+						m_Player.m_hasHitThisAttack = true;
+						m_Player.canDamageEnemy = false;  
+						m_Player.m_damageMultiplier = 1.0f;  
 
 						if (enemy.health <= 0)
 						{
@@ -844,7 +851,7 @@ void Game::update(sf::Time t_deltaTime)
 				}
 
 				// Player attacking archer (your existing code)
-				if (m_Player.canDamageEnemy)
+				if (m_Player.canDamageEnemy && !m_Player.m_hasHitThisAttack)
 				{
 					float dx = m_Player.attackHitbox.getPosition().x - archer.pos.x;
 					float dy = m_Player.attackHitbox.getPosition().y - archer.pos.y;
@@ -852,8 +859,15 @@ void Game::update(sf::Time t_deltaTime)
 
 					if (distance < m_Player.attackHitboxRadius + 30.f)
 					{
-						archer.TakeDamage(1);
+						int damage = static_cast<int>(1 * m_Player.m_damageMultiplier);
+						archer.TakeDamage(damage);
+
+						float knockbackDir = m_Player.facingRight ? 1.f : -1.f;
+						archer.velocity.x = knockbackDir * 150.f;  
+
+						m_Player.m_hasHitThisAttack = true;   
 						m_Player.canDamageEnemy = false;
+						m_Player.m_damageMultiplier = 1.0f;
 
 						if (archer.health <= 0)
 						{
@@ -996,6 +1010,16 @@ void Game::render()
 				sf::Vector2f enemyRenderPos = enemy.pos - m_cameraOffset;
 				enemy.sprite->setPosition(enemyRenderPos);
 				m_window.draw(*enemy.sprite);
+
+				if (enemy.m_isStunned)
+				{
+					for (auto& star : enemy.m_stunStars)
+					{
+						sf::CircleShape renderStar = star;
+						renderStar.setPosition(star.getPosition() - m_cameraOffset);
+						m_window.draw(renderStar);
+					}
+				}
 			}
 
 			// Render ARCHERS
@@ -1007,6 +1031,16 @@ void Game::render()
 				sf::Vector2f archerRenderPos = archer.pos - m_cameraOffset;
 				archer.sprite->setPosition(archerRenderPos);
 				m_window.draw(*archer.sprite);
+
+				if (archer.m_isStunned)
+				{
+					for (auto& star : archer.m_stunStars)
+					{
+						sf::CircleShape renderStar = star;
+						renderStar.setPosition(star.getPosition() - m_cameraOffset);
+						m_window.draw(renderStar);
+					}
+				}
 			}
 
 			// Render ARROWS

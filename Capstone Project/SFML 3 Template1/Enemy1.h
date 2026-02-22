@@ -70,10 +70,15 @@ public:
     bool hasDealtDamage = false;
     float attackCooldown = 0.f;
     float attackCooldownTime = 1.0f;
+    bool m_isStunned = false;
+    float m_stunTimer = 0.f;
+    const float STUN_DURATION = 0.9f;
+    std::vector<sf::CircleShape> m_stunStars;
+    bool m_stunStarsInitialized = false;
 
     // --- Health System ---
     int health = 2;
-    static constexpr int MAX_HEALTH = 2;
+    static constexpr int MAX_HEALTH = 8;
     std::vector<sf::RectangleShape> healthBar;
 
     // --- Constructor / Setup ---

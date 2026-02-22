@@ -43,7 +43,7 @@ public:
 
     // --- Health System ---
     int health;
-    static constexpr int MAX_HEALTH = 2;  // Archers are weaker
+    static constexpr int MAX_HEALTH = 6;  // Archers are weaker
     std::vector<sf::RectangleShape> healthBar;
 
     // --- State ---
@@ -73,8 +73,13 @@ public:
     bool canDamagePlayer;
     bool hasDealtDamage;
     float attackCooldown;
-    float attackCooldownTime; // 2.5s (slower attacks)
-    float preferredDistance;  // 350 (keeps distance)
+    float attackCooldownTime; // 1.5s (slower attack)
+    float preferredDistance;  // 250 (keep distance)
+    bool m_isStunned = false;
+    float m_stunTimer = 0.f;
+    const float STUN_DURATION = 0.3f;
+    std::vector<sf::CircleShape> m_stunStars;
+    bool m_stunStarsInitialized = false;
 
     // Constructor & Setup
     Enemy2();

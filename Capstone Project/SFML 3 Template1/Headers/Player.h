@@ -193,12 +193,22 @@ public:
     float m_lastBlockTiming = 0.5f;
     bool m_isPerfectParry = false;
 
+    int m_comboCount = 0;
+    float m_comboTimer = 0.f;
+    const float COMBO_TIMEOUT = 1.5f;
+    float m_attackSpeedMultiplier = 1.0f;
+    bool m_hasHitThisAttack = false;
+    float m_damageMultiplier = 1.0f;
+    sf::Vector2f m_attackMomentum{ 0.f, 0.f };
+
     std::optional<sf::Text> m_timingFeedbackText;  
     float m_timingFeedbackTimer = 0.f;
     const float TIMING_FEEDBACK_DURATION = 1.0f;
 
     sf::CircleShape m_beatIndicator;
     float m_beatPulseScale = 1.0f;
+
+    std::optional<sf::Text> m_comboText;
 
     void setBPMSystem(BPMCombatSystem* system);
 

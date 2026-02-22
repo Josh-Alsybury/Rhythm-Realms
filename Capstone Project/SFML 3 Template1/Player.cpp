@@ -40,19 +40,40 @@ void player::moveRight()
 
 void player::Attack()
 {
-    if (velocity.x == 0.f)
-        if (isOnGround)
+    if (velocity.x == 0.f && isOnGround)
+    {
+        isAttack = true;
+        m_hasHitThisAttack = false;
+
+        float lungeSpeed = 150.f;
+        m_attackMomentum.x = facingRight ? lungeSpeed : -lungeSpeed;
+
+        if (m_bpmSystem)
         {
-            isAttack = true;
+            BPMCombatSystem::HitTiming timing = m_bpmSystem->evaluateHitTiming();
 
-            if (m_bpmSystem)
+            if (timing == BPMCombatSystem::HitTiming::Perfect)
             {
-                BPMCombatSystem::HitTiming timing = m_bpmSystem->evaluateHitTiming();
-                m_lastAttackTiming = m_bpmSystem->registerHit(timing);
-
+                m_damageMultiplier = 2.0f;
+                m_attackMomentum.x *= 1.5f;  
+                m_comboCount++;
+                m_comboTimer = COMBO_TIMEOUT;
                 ShowTimingFeedback(timing);
             }
+            else if (timing == BPMCombatSystem::HitTiming::Good)
+            {
+                m_damageMultiplier = 1.5f;
+                m_attackMomentum.x *= 1.2f;  
+                m_comboCount++;
+                m_comboTimer = COMBO_TIMEOUT;
+                ShowTimingFeedback(timing);
+            }
+            else
+            {
+                m_damageMultiplier = 1.0f;
+            }
         }
+    }
 }
 
 void player::Defend()
@@ -206,6 +227,27 @@ void player::Update(float dt)
         }
     }
 
+    if (state == PlayerState::Attack && m_frameNow <= 3)
+    {
+        // Lunge during first half of attack
+        pos.x += m_attackMomentum.x * dt;
+        m_attackMomentum.x *= 0.9f;  // Decay momentum
+    }
+    else
+    {
+        m_attackMomentum.x = 0.f;  // Reset not attacking
+    }
+
+    if (m_comboTimer > 0.f)
+    {
+        m_comboTimer -= dt;
+        if (m_comboTimer <= 0.f)
+        {
+            // Combo expired
+            m_comboCount = 0;
+        }
+    }
+
     if (!isOnGround)
     {
         if (state == PlayerState::Jump_start)
@@ -271,17 +313,23 @@ void player::Update(float dt)
     float hitboxOffsetX = facingRight ? 60.f : -60.f;
     attackHitbox.setPosition(sf::Vector2f(pos.x + hitboxOffsetX, pos.y));
 
-    // Only allow damage during attack anim frame 3-5
+
     if (state == PlayerState::Attack && m_frameNow >= 3 && m_frameNow <= 5)
-        canDamageEnemy = true;
+    {
+        if (!m_hasHitThisAttack)
+        {
+            canDamageEnemy = true;
+        }
+    }
     else
+    {
         canDamageEnemy = false;
-    // Only allow block during defend animframe 1-3
+    }
+
     if (state == PlayerState::Defend && m_frameNow >= 1 && m_frameNow <= 5)
         canBlockEnemy = true;
     else
         canBlockEnemy = false;
-
 
     sprite->setPosition(pos);
 }
@@ -300,6 +348,11 @@ void player::InitializeBPMVisuals(const sf::Font& font)
     m_beatIndicator.setOutlineColor(sf::Color::Cyan);
     m_beatIndicator.setOutlineThickness(3.f);
     m_beatIndicator.setOrigin({ 20.f, 20.f });
+
+    m_comboText.emplace(font, "", 24);
+    m_comboText->setFillColor(sf::Color(255, 165, 0));  // Orange
+    m_comboText->setOutlineColor(sf::Color::Black);
+    m_comboText->setOutlineThickness(2.f);
 }
 
 void player::UpdateBPMVisuals(float dt, float currentBPM)
@@ -352,6 +405,16 @@ void player::RenderBPMVisualsAtPosition(sf::RenderWindow& window, const sf::Vect
             screenPos.y - 120.f
             });
         window.draw(*m_timingFeedbackText);
+    }
+
+    if (m_comboCount > 0 && m_comboText.has_value())
+    {
+        sf::FloatRect comboBounds = m_comboText->getLocalBounds();
+        m_comboText->setPosition({
+            screenPos.x - comboBounds.size.x / 2.f,
+            screenPos.y - 150.f  // Above timing feedback
+            });
+        window.draw(*m_comboText);
     }
 }
 
