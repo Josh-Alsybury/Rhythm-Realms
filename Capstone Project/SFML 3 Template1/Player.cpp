@@ -133,7 +133,7 @@ void player::AnimatePlayer()
             if (HealsCount > 0 || health != MAX_HEALTH)
             {
                 HealsCount -= 1;
-                health = MAX_HEALTH;
+                health = std::min(health + 40, MAX_HEALTH); 
                 HealCall();
                 Health();
             }
@@ -181,15 +181,18 @@ void player::UpdateAnimationTexture()
 void player::Health()
 {
     HealBar.clear();
+    sf::RectangleShape backgroud;
+    backgroud.setSize({200.f,20.f});
+    backgroud.setFillColor( sf::Color(60, 60, 60) );
+    backgroud.setPosition({ 10.f, 15.f });
+    HealBar.push_back(backgroud);
 
-    for (int i = 0; i < health; ++i)
-    {
-        sf::RectangleShape bar;
-        bar.setSize({ 25.f, 25.f });
-        bar.setFillColor(sf::Color::Red);
-        bar.setPosition({ 10.f + (i * 32.f), 15.f });
-        HealBar.push_back(bar);
-    }
+    float ratio = static_cast<float>(health) / MAX_HEALTH;
+    sf::RectangleShape foreground;
+    foreground.setSize({ 200.f * ratio, 20.f });
+    foreground.setFillColor(sf::Color(200, 30, 30));
+    foreground.setPosition({ 10.f, 15.f });
+    HealBar.push_back(foreground);
 }
 
 void player::HealCall()
@@ -210,7 +213,7 @@ void player::HealCall()
 
 void player::TakeDamage(int amount)
 {
-    health -= 1;
+    health -= amount;
     if (health < 0) health = 0;
     Health();
 }
@@ -342,13 +345,6 @@ void player::InitializeBPMVisuals(const sf::Font& font)
     m_timingFeedbackText->setOutlineColor(sf::Color::Black);
     m_timingFeedbackText->setOutlineThickness(2.f);
 
-    //  beat indicator 
-    m_beatIndicator.setRadius(20.f);
-    m_beatIndicator.setFillColor(sf::Color(255, 255, 255, 100));
-    m_beatIndicator.setOutlineColor(sf::Color::Cyan);
-    m_beatIndicator.setOutlineThickness(3.f);
-    m_beatIndicator.setOrigin({ 20.f, 20.f });
-
     m_comboText.emplace(font, "", 24);
     m_comboText->setFillColor(sf::Color(255, 165, 0));  // Orange
     m_comboText->setOutlineColor(sf::Color::Black);
@@ -391,10 +387,6 @@ void player::UpdateBPMVisuals(float dt, float currentBPM)
 
 void player::RenderBPMVisualsAtPosition(sf::RenderWindow& window, const sf::Vector2f& screenPos)
 {
-    // Beat indicator 
-    m_beatIndicator.setPosition({ screenPos.x, screenPos.y - 80.f });
-    m_beatIndicator.setScale({ m_beatPulseScale, m_beatPulseScale });
-    window.draw(m_beatIndicator);
 
     // Timing feedback text
     if (m_timingFeedbackTimer > 0.f && m_timingFeedbackText.has_value())

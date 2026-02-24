@@ -132,6 +132,17 @@ void Enemy1::Update(float dt, sf::Vector2f playerPos)
     Enemy1::Animation* anim = GetCurrentAnimation();
     assert(sprite && anim && anim->texture);
 
+    if (m_flashTimer > 0.f)
+    {
+        m_flashTimer -= dt;
+        sprite->setColor(sf::Color(255, 0, 0, 255));
+    }
+    else
+    {
+        sprite->setColor(sf::Color(255, 255, 255, 255));
+    }
+
+
     // CHECK STUN FIRST  BEFORE AI OR MOVEMENT
     if (m_isStunned)
     {
@@ -141,10 +152,20 @@ void Enemy1::Update(float dt, sf::Vector2f playerPos)
             m_isStunned = false;
         }
 
-        //apply knockback velocity during stun
-        float knockbackDir = facingRight ? -1.f : 1.f;
-        pos.x += knockbackDir * 150.f * dt;  
+        pos.x += m_knockbackVelocity * dt;  
 
+        if (m_knockbackVelocity > 0.f)
+        {
+            m_knockbackVelocity -= KNOCKBACK_FRICTION * dt;
+            if (m_knockbackVelocity < 0.f) m_knockbackVelocity;
+        }
+        else if (m_knockbackVelocity < 0.f)
+        {
+            m_knockbackVelocity += KNOCKBACK_FRICTION * dt;
+            if (m_knockbackVelocity > 0.f) m_knockbackVelocity;
+        }
+
+       
         // Update stun star
         float bounceOffset = std::sin(m_stunTimer * 10.f) * 5.f;
         for (int i = 0; i < m_stunStars.size(); ++i)
@@ -284,6 +305,8 @@ void Enemy1::SetState(EnemyState newState)
 
 void Enemy1::AIBehavior(sf::Vector2f playerPos, float dt)
 {
+    if (m_isStunned) return;
+
     float distance = DistanceToPlayer(playerPos);
 
     // Determine direction
@@ -294,7 +317,7 @@ void Enemy1::AIBehavior(sf::Vector2f playerPos, float dt)
         attackCooldown -= dt;
 
     // --- ATTACK ---
-    if (distance <= attackRange && attackCooldown <= 0.f)
+    if (distance <= attackRange && attackCooldown <= 0.f && !m_isStunned)
     {
         SetState(EnemyState::Attacking);
         velocity.x = 0.f;
@@ -343,6 +366,15 @@ void Enemy1::TakeDamage(int amount)
 
     m_isStunned = true;
     m_stunTimer = STUN_DURATION;
+    m_knockbackVelocity = facingRight ? -500.f : 500.f;
+    if (state == EnemyState::Attacking || state == EnemyState::Running)
+    {
+        SetState(EnemyState::Idle);
+    }
+    canDamagePlayer = false;
+    hasDealtDamage = true;
+
+    m_flashTimer = FLASH_DURATION;
 
     UpdateHealthBar();
 }

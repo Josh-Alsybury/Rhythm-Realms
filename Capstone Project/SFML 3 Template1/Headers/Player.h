@@ -42,8 +42,8 @@ public:
     std::vector<sf::CircleShape> HealSphere;
     int HealsCount = 2;
     std::vector<sf::RectangleShape> HealBar;
-    int health = 5;
-    static constexpr int MAX_HEALTH = 5;
+    int health = 100;
+    static constexpr int MAX_HEALTH = 100;
 
     sf::CircleShape attackHitbox;
     float attackHitboxRadius = 50.f;
@@ -205,7 +205,6 @@ public:
     float m_timingFeedbackTimer = 0.f;
     const float TIMING_FEEDBACK_DURATION = 1.0f;
 
-    sf::CircleShape m_beatIndicator;
     float m_beatPulseScale = 1.0f;
 
     std::optional<sf::Text> m_comboText;

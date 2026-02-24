@@ -299,7 +299,7 @@ void Game::checkKeyboardState()
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
 	{
-		m_Player.TakeDamage(1);
+		m_Player.TakeDamage(15);
 	}
 }
 
@@ -355,7 +355,7 @@ void Game::update(sf::Time t_deltaTime)
 
 		// Center camera on player with smooth following
 		float targetCameraX = m_Player.pos.x - viewWidth * 0.5f;
-		m_cameraOffset.x += (targetCameraX - m_cameraOffset.x) * dt;
+		m_cameraOffset.x = targetCameraX;
 
 		m_cameraOffset.x = std::clamp(m_cameraOffset.x, minCameraX, maxCameraX);
 
@@ -365,17 +365,6 @@ void Game::update(sf::Time t_deltaTime)
 			m_cameraOffset.y + viewHeight / 2.f });
 
 		m_screenEffect.updateHub(dt);
-
-		sf::Vector2i pixelPos =
-			m_window.mapCoordsToPixel(m_Player.pos, m_gameView);
-
-		sf::Vector2f playerScreenPos(
-			static_cast<float>(pixelPos.x),
-			static_cast<float>(m_windowSize.y - pixelPos.y)
-		);
-		
-
-		m_screenEffect.updatePlayerLight(playerScreenPos);
 	}
 	else
 	{
@@ -773,7 +762,7 @@ void Game::update(sf::Time t_deltaTime)
 					}
 					else
 					{
-						m_Player.TakeDamage(1);
+						m_Player.TakeDamage(15);
 						enemy.hasDealtDamage = true;
 						enemy.canDamagePlayer = false;
 						std::cout << "Player hit! Health: " << m_Player.health << std::endl;
@@ -902,7 +891,7 @@ void Game::update(sf::Time t_deltaTime)
 					}
 					else
 					{
-						m_Player.TakeDamage(1);
+						m_Player.TakeDamage(10);
 						arrow.active = false;
 						std::cout << "Arrow hit player! Health: " << m_Player.health << std::endl;
 					}
@@ -978,6 +967,17 @@ void Game::render()
 				m_window.draw(bar);
 			for (int i = 0; i < m_Player.HealsCount; i++)
 				m_window.draw(m_Player.HealSphere[i]);
+
+			sf::Vector2f worldPos = m_Player.sprite->getPosition();
+
+			sf::Vector2i pixelPos = m_window.mapCoordsToPixel(worldPos, m_gameView);
+
+			sf::Vector2f playerRenderPos(
+				static_cast<float>(pixelPos.x),
+				static_cast<float>(m_windowSize.y - pixelPos.y)
+			);
+
+			m_screenEffect.updatePlayerLight(playerRenderPos);
 
 			// render shader 
 			m_screenEffect.render(m_window);;

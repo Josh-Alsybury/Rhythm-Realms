@@ -72,9 +72,15 @@ public:
     float attackCooldownTime = 1.0f;
     bool m_isStunned = false;
     float m_stunTimer = 0.f;
-    const float STUN_DURATION = 0.9f;
+    const float STUN_DURATION = 2.0f;
     std::vector<sf::CircleShape> m_stunStars;
     bool m_stunStarsInitialized = false;
+
+    float m_knockbackVelocity = 0.f;
+    const float KNOCKBACK_FRICTION = 800.f;
+
+    float m_flashTimer = 0.f;
+    const float FLASH_DURATION = 0.1f;
 
     // --- Health System ---
     int health = 2;
