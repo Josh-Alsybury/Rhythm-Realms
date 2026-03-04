@@ -1,6 +1,5 @@
 /// <summary>
-/// author Pete Lowe May 2025
-/// you need to change the above line or lose marks
+/// author Josh alsybury
 /// </summary>
 #include "Headers/Game.h"
 #include <iostream>
@@ -279,7 +278,8 @@ void Game::processKeys(const std::optional<sf::Event> t_event)
 	}
 	if (sf::Keyboard::Key::T == newKeypress->code)
 	{
-		m_showSkillTree = !m_showSkillTree;
+		if (m_isInHub)
+			m_showSkillTree = !m_showSkillTree;
 	}
 	if (sf::Keyboard::Key::F3 == newKeypress->code)
 	{
@@ -350,16 +350,14 @@ void Game::update(sf::Time t_deltaTime)
 
 		// Clamp to hub boundaries
 		float minCameraX = 0.f;
-		float rightPadding = 450.f; // reduce the right side
+		float rightPadding = 450.f; 
 		float maxCameraX = std::max(0.f, hubWidth - viewWidth - rightPadding);
 
-		// Center camera on player with smooth following
 		float targetCameraX = m_Player.pos.x - viewWidth * 0.5f;
 		m_cameraOffset.x = targetCameraX;
 
 		m_cameraOffset.x = std::clamp(m_cameraOffset.x, minCameraX, maxCameraX);
 
-		// Apply view 
 		m_gameView.setSize({ viewWidth, viewHeight });
 		m_gameView.setCenter({ m_cameraOffset.x + viewWidth / 2.f,
 			m_cameraOffset.y + viewHeight / 2.f });
@@ -381,7 +379,7 @@ void Game::update(sf::Time t_deltaTime)
 		m_cameraOffset.y = std::round(m_cameraOffset.y);
 	}
 
-	// ===== PLAYER COLLISION (always active) =====
+	// ===== PLAYER COLLISION  =====
 	sf::Vector2f oldPos = m_Player.pos;
 	m_Player.pos.x += m_Player.velocity.x * dt;
 
@@ -495,6 +493,8 @@ void Game::update(sf::Time t_deltaTime)
 		// Update background
 		m_dynamicBackground.update(m_cameraOffset);
 		m_gameTimer += dt;
+
+		m_bpmStream.setVolume(0.f);
 
 		// BPM processing
 		float rawBPM = 0.f;
@@ -610,8 +610,6 @@ void Game::update(sf::Time t_deltaTime)
 		// Chunk scrolling
 		updateChunks();
 
-		if (!m_showSkillTree)
-		{
 			// Enemy spawning + updates 
 			float rightmostChunkX = -999999.0f;
 			for (const auto& chunk : m_chunks)
@@ -911,7 +909,6 @@ void Game::update(sf::Time t_deltaTime)
 				m_arrows.end()
 			);
 
-		}
 	}
 }
 
@@ -979,6 +976,17 @@ void Game::render()
 
 			m_screenEffect.updatePlayerLight(playerRenderPos);
 
+			// Skill tree overlay
+			if (m_showSkillTree)
+			{
+				sf::Vector2f windowSizeFloat(
+					static_cast<float>(m_windowSize.x),
+					static_cast<float>(m_windowSize.y)
+				);
+				sf::RectangleShape overlay(windowSizeFloat);
+				overlay.setFillColor(sf::Color(0, 0, 0, 180));
+				m_skillTree.Draw(m_window);
+			}
 			// render shader 
 			m_screenEffect.render(m_window);;
 		}
@@ -1071,16 +1079,7 @@ void Game::render()
 
 			m_screenEffect.render(m_window);
 
-			// Skill tree overlay
-			if (m_showSkillTree)
-			{
-				sf::Vector2f windowSizeFloat(
-					static_cast<float>(m_windowSize.x),
-					static_cast<float>(m_windowSize.y)
-				);
-				sf::RectangleShape overlay(windowSizeFloat);
-				overlay.setFillColor(sf::Color(0, 0, 0, 180));
-			}
+
 		}
 	}
 	m_window.display();
@@ -1169,7 +1168,7 @@ void Game::updateChunks()
 		}
 
 		// Only recycle if leftmost is  behind playe
-		if (m_Player.pos.x > leftmostX + m_chunkWidth)
+		if (m_Player.pos.x > leftmostX + m_chunkWidth * 1.5f )
 		{
 			float newX = rightmostX;
 			loadChunkAt(leftmostIndex, newX);

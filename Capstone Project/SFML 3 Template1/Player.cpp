@@ -367,22 +367,6 @@ void player::UpdateBPMVisuals(float dt, float currentBPM)
             m_timingFeedbackText->setFillColor(color);
         }
     }
-
-    // Beat pulse animation
-    if (currentBPM > 0.f)
-    {
-        float beatPeriod = 60.f / currentBPM;
-        static float beatTimer = 0.f;
-        beatTimer += dt;
-
-        if (beatTimer >= beatPeriod)
-        {
-            beatTimer -= beatPeriod;
-            m_beatPulseScale = 1.5f;  // Pulse on beat
-        }
-
-        m_beatPulseScale += (1.0f - m_beatPulseScale) * 8.0f * dt;
-    }
 }
 
 void player::RenderBPMVisualsAtPosition(sf::RenderWindow& window, const sf::Vector2f& screenPos)
@@ -410,7 +394,6 @@ void player::RenderBPMVisualsAtPosition(sf::RenderWindow& window, const sf::Vect
     }
 }
 
-// Keep the old method for backwards compatibility
 void player::RenderBPMVisuals(sf::RenderWindow& window)
 {
     RenderBPMVisualsAtPosition(window, pos);
