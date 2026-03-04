@@ -1168,7 +1168,7 @@ void Game::updateChunks()
 		}
 
 		// Only recycle if leftmost is  behind playe
-		if (m_Player.pos.x > leftmostX + m_chunkWidth * 1.5f )
+		if (m_Player.pos.x > leftmostX + m_chunkWidth * 2.0f )
 		{
 			float newX = rightmostX;
 			loadChunkAt(leftmostIndex, newX);
