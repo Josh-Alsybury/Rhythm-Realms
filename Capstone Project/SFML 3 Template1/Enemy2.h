@@ -43,12 +43,16 @@ public:
 
     // --- Health System ---
     int health;
-    static constexpr int MAX_HEALTH = 6;  // Archers are weaker
+    int MAX_HEALTH = 6;  // Archers are weaker
     std::vector<sf::RectangleShape> healthBar;
 
     // --- State ---
     ArcherState state;
     bool isInitialised = false;
+
+    // --- fuzzy logic setters ---
+    void setSpeed(float s) { speed = s; }
+    void setAttackCooldown(float c) { attackCooldownTime = c; }
 
     // --- Animations
     Animation idleAnim;

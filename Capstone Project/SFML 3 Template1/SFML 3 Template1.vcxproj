@@ -40,6 +40,7 @@
     <ClInclude Include="EnemyCollision.h" />
     <ClInclude Include="EnemySpawnManager.h" />
     <ClInclude Include="EnemyTextures.h" />
+    <ClInclude Include="FuzzyBpmController.h" />
     <ClInclude Include="Headers\Background.h" />
     <ClInclude Include="Headers\BPM.h" />
     <ClInclude Include="Headers\BpmStream.h" />
@@ -69,6 +70,7 @@
     <ClCompile Include="Enemy2.cpp" />
     <ClCompile Include="EnemySpawnManager.cpp" />
     <ClCompile Include="EnemyTextures.cpp" />
+    <ClCompile Include="FuzzyBpmController.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Hub.cpp" />
     <ClCompile Include="ItemDatabase.cpp" />

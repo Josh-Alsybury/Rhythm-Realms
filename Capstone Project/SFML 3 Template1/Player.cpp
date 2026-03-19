@@ -232,7 +232,6 @@ void player::Update(float dt)
 
     if (state == PlayerState::Attack && m_frameNow <= 3)
     {
-        // Lunge during first half of attack
         pos.x += m_attackMomentum.x * dt;
         m_attackMomentum.x *= 0.9f;  // Decay momentum
     }
@@ -383,7 +382,7 @@ void player::RenderBPMVisualsAtPosition(sf::RenderWindow& window, const sf::Vect
         window.draw(*m_timingFeedbackText);
     }
 
-    if (m_comboCount > 0 && m_comboText.has_value())
+    if (m_comboCount > 0 && m_comboText.has_value()) // Not working right now 
     {
         sf::FloatRect comboBounds = m_comboText->getLocalBounds();
         m_comboText->setPosition({

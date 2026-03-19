@@ -144,6 +144,9 @@
     <ClInclude Include="Bpmcombatsystem.h">
       <Filter>Header Files\Bpm</Filter>
     </ClInclude>
+    <ClInclude Include="FuzzyBpmController.h">
+      <Filter>Header Files\Bpm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp">
@@ -211,6 +214,9 @@
     </ClCompile>
     <ClCompile Include="ItemDatabase.cpp">
       <Filter>Source Files\Shop</Filter>
+    </ClCompile>
+    <ClCompile Include="FuzzyBpmController.cpp">
+      <Filter>Source Files\Bpm</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

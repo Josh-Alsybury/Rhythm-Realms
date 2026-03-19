@@ -35,6 +35,7 @@
 #include "Hub.h"
 #include "ScreenEffect.h"
 #include "BpmCombatSystem.h"
+#include "FuzzyBpmController.h"
 #include <memory>
 
 
@@ -68,6 +69,8 @@ private:
 
 	sf::View m_gameView;
 	ScreenEffect m_screenEffect;
+
+	FuzzyBpmController m_fuzzyController;
 
 	void processEvents();
 	void processKeys(const std::optional<sf::Event> t_event);
@@ -109,13 +112,8 @@ private:
 
 	// Enemy spawning
 	EnemySpawnManager m_enemySpawnManager;
-	float m_gameTimer;  // Tracks total game time
+	float m_gameTimer;  
 
-	// Spawn configurations for different difficulties
-	EnemySpawnConfig m_easyConfig;
-	EnemySpawnConfig m_normalConfig;
-	EnemySpawnConfig m_hardConfig;
-	
 	bool m_DELETEexitGame; // control exiting game
 	player m_Player;
 	//std::vector<Npc> m_npcs;

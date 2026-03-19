@@ -57,6 +57,10 @@ public:
     // --- State ---
     EnemyState state = EnemyState::Idle;
 
+    // --- fuzzy logic setters ---
+    void setSpeed(float s) { speed = s; }
+    void setAttackCooldown(float c) { attackCooldownTime = c; }
+
     // --- Detection Circles ---
     sf::CircleShape detectionRadius;
     sf::CircleShape attackRadius;
@@ -83,8 +87,8 @@ public:
     const float FLASH_DURATION = 0.1f;
 
     // --- Health System ---
-    int health = 2;
-    static constexpr int MAX_HEALTH = 8;
+    int health;
+    int MAX_HEALTH = 8;
     std::vector<sf::RectangleShape> healthBar;
 
     // --- Constructor / Setup ---

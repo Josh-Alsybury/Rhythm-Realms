@@ -177,6 +177,7 @@ public:
 
         return info;
     }
+
     HitTiming evaluateHitTiming() const
     {
         BeatInfo beat = getCurrentBeatInfo();
@@ -190,6 +191,14 @@ public:
             return HitTiming::Okay;
         else
             return HitTiming::Miss;
+
+    }
+
+    bool isInGoodTimingWindow() const
+    {
+        BeatInfo beat = getCurrentBeatInfo();
+        float distanceFromBeat = std::min(beat.timeSinceLastBeat, beat.timeUntilNextBeat);
+        return distanceFromBeat <= GOOD_WINDOW;
 
     }
 
@@ -287,7 +296,6 @@ public:
 
     int getCurrentCombo() const { return m_currentCombo; }
     int getMaxCombo() const { return m_maxCombo; }
-
     float getComboMultiplier() const { return m_comboMultiplier; }
 
 
@@ -326,12 +334,5 @@ public:
 
     }
 
-    bool isInGoodTimingWindow() const
-    {
-        BeatInfo beat = getCurrentBeatInfo();
-        float distanceFromBeat = std::min(beat.timeSinceLastBeat, beat.timeUntilNextBeat);
-        return distanceFromBeat <= GOOD_WINDOW;
-
-    }
 
 };

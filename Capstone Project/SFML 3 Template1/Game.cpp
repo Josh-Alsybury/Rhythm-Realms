@@ -31,9 +31,6 @@ Game::Game() :
 		throw std::runtime_error("Failed to load enemy textures");
 	}
 
-	m_easyConfig = EnemySpawnConfig(800.f, 1200.f, 5.0f, 2);
-	m_normalConfig = EnemySpawnConfig(800.f, 1200.f, 3.0f, 3);
-	m_hardConfig = EnemySpawnConfig(800.f, 1200.f, 1.5f, 5);
 }
 /// <summary>
 /// default destructor we didn't dynamically allocate anything
@@ -599,13 +596,42 @@ void Game::update(sf::Time t_deltaTime)
 		}
 
 
-		// Difficulty scaling
-		if (m_currentBPM > 140.f)
-			m_enemySpawnManager.SetSpawnConfig(m_hardConfig);
-		else if (m_currentBPM < 100.f)
-			m_enemySpawnManager.SetSpawnConfig(m_easyConfig);
-		else
-			m_enemySpawnManager.SetSpawnConfig(m_normalConfig);
+		// Difficulty 
+		FuzzyGameParams fuzzyParams = m_fuzzyController.update(m_currentBPM);
+		m_enemySpawnManager.SetSpawnConfig(EnemySpawnConfig(
+			800.f,                    
+			1200.f,                   
+			fuzzyParams.spawnRate,    
+			3                         
+		));
+
+		for (auto& enemy : m_enemies)
+		{
+			enemy.setSpeed(fuzzyParams.enemySpeed);
+			enemy.setAttackCooldown(fuzzyParams.attackCooldown);
+			enemy.MAX_HEALTH = static_cast<int>(fuzzyParams.enemyHP);
+		}
+		for (auto& archer : m_archers)
+		{
+			archer.setSpeed(fuzzyParams.enemySpeed);
+			archer.setAttackCooldown(fuzzyParams.attackCooldown);
+			archer.MAX_HEALTH = static_cast<int>(fuzzyParams.enemyHP);
+		}
+
+		static float debugTimer = 0.f;
+		debugTimer += dt;
+		if (debugTimer >= 2.f)
+		{
+			debugTimer = 0.f;
+			std::cout << "=== FUZZY OUTPUT ===" << std::endl;
+			std::cout << "BPM: " << m_currentBPM << std::endl;
+			std::cout << "Enemy Speed: " << fuzzyParams.enemySpeed << std::endl;
+			std::cout << "Enemy HP: " << fuzzyParams.enemyHP << std::endl;
+			std::cout << "Attack Cooldown: " << fuzzyParams.attackCooldown << std::endl;
+			std::cout << "Spawn Rate: " << fuzzyParams.spawnRate << std::endl;
+			std::cout << "Attack Window: " << fuzzyParams.attackWindowSize << std::endl;
+			std::cout << "====================" << std::endl;
+		}
 
 		// Chunk scrolling
 		updateChunks();
