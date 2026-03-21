@@ -34,6 +34,7 @@ public:
     float maxSpeed = 550.f;    
     float gravity = 200.f;
     float Groundlevel = 740.f;
+    float m_overhealCap = 1.0f;
 
     int m_frameNow{ 0 };
     float m_frameCount{ 0.0f };
@@ -43,7 +44,7 @@ public:
     int HealsCount = 2;
     std::vector<sf::RectangleShape> HealBar;
     int health = 100;
-    static constexpr int MAX_HEALTH = 100;
+    int MAX_HEALTH = 100;
 
     sf::CircleShape attackHitbox;
     float attackHitboxRadius = 50.f;
@@ -200,6 +201,13 @@ public:
     bool m_hasHitThisAttack = false;
     float m_damageMultiplier = 1.0f;
     sf::Vector2f m_attackMomentum{ 0.f, 0.f };
+
+    bool m_hasPerfectParry = false;
+    bool m_parryPowerHit = false;
+    int m_perfectParryStacks = 0;
+    bool m_parrySpeedBurst = false;
+
+    bool m_hasAttackSpeed = false;
 
     std::optional<sf::Text> m_timingFeedbackText;  
     float m_timingFeedbackTimer = 0.f;

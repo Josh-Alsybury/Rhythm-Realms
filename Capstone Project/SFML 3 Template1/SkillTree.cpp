@@ -3,29 +3,23 @@
 
 SkillTree::SkillTree() : m_skillPoints(0)
 {
-
     m_skills = {
-        // Survivability branch
-        { "Extra Heal I", "+1 Heal Charge", 1, false, Skill::Branch::Survivability, 0, Skill::Type::EXTRA_HEAL },
-        { "Extra Heal II", "+1 Heal Charge", 2, false, Skill::Branch::Survivability, 1, Skill::Type::EXTRA_HEAL },
-        { "Extra Heart I", "+1 Max HP", 2, false, Skill::Branch::Survivability, 2, Skill::Type::EXTRA_HEALTH },
-        { "Heal on Kill", "Small heal when killing enemies", 3, false, Skill::Branch::Survivability, 3, Skill::Type::HEAL_ON_KILL },
+        // Survival branch
+        { "Extra Heal I",   "+1 Heal Charge",          2, false, Skill::Branch::Survivability, 0, Skill::Type::EXTRA_HEAL,          0, 1 },
+        { "Extra Heal II",  "+1 Heal Charge",          4, false, Skill::Branch::Survivability, 1, Skill::Type::EXTRA_HEAL,          0, 1 },
+        { "Extra Health",   "+20 Max HP",              3, false, Skill::Branch::Survivability, 2, Skill::Type::EXTRA_HEALTH,        0, 1 },
+        { "Overheal",       "Kills overheal above max", 4, false, Skill::Branch::Survivability, 3, Skill::Type::OVERHEAL,           0, 3 },
 
         // Offense branch
-        { "Attack Up I", "+10% damage", 1, false, Skill::Branch::Offense, 0, Skill::Type::CRIT_CHANCE },
-        { "Attack Up II", "+10% damage", 2, false, Skill::Branch::Offense, 1, Skill::Type::CRIT_CHANCE },
-        { "Special Attack", "Unlocks special finisher", 4, false, Skill::Branch::Offense, 2, Skill::Type::SPECIAL_ATTACK },
-        { "Attack Speed", "Faster combo window", 3, false, Skill::Branch::Offense, 3, Skill::Type::ATTACK_SPEED },
+        { "Multiplier",     "Raise base combo floor",  2, false, Skill::Branch::Offense,       0, Skill::Type::MULTIPLIER_BOOST,   0, 3 },
+        { "Attack Speed",   "Faster combo window",     3, false, Skill::Branch::Offense,       1, Skill::Type::ATTACK_SPEED,       0, 1 },
 
-        // Mobility branch
-        { "Dash", "Quick dash move", 2, false, Skill::Branch::Mobility, 0, Skill::Type::DASH },
-        { "Dash I-frames", "Dash grants brief invulnerability", 3, false, Skill::Branch::Mobility, 1, Skill::Type::DASH },
-        { "Double Dash", "2 dash charges", 4, false, Skill::Branch::Mobility, 2, Skill::Type::DASH },
+        // Mobilty branch
+        { "Perfect Parry",  "Parry: speed or power",   3, false, Skill::Branch::Mobility,      0, Skill::Type::PERFECT_BLOCK_BONUS, 0, 2 },
 
-        // Rhythm branch 
-        { "Perfect Guard", "Perfect blocks restore stamina", 2, false, Skill::Branch::Rhythm, 0, Skill::Type::PERFECT_BLOCK_BONUS },
-        { "Beat Fury", "+damage at high BPM", 3, false, Skill::Branch::Rhythm, 1, Skill::Type::BPM_DAMAGE_BOOST },
-        { "Beat Focus", "+defence at low BPM", 3, false, Skill::Branch::Rhythm, 2, Skill::Type::BPM_DEFENCE_BOOST }
+        // Rhythm branch BPM locked
+        { "Low BPM Dmg",    "+20% taken dmg at low BPM",    2, false, Skill::Branch::Rhythm,        0, Skill::Type::BPM_DAMAGE_BOOST,   0, 3 },
+        { "High BPM Def",   "-15% given dmg at high BPM",   2, false, Skill::Branch::Rhythm,        1, Skill::Type::BPM_DEFENCE_BOOST,  0, 3 },
     };
 
     // Build branch index lists
@@ -36,9 +30,8 @@ SkillTree::SkillTree() : m_skillPoints(0)
         m_branchIndices[b].push_back(i);
     }
 
-    // Layout: 4 branches radiating around centre
+    // Layout branches radiating around centre
     sf::Vector2f center(500.f, 400.f);
-    float branchRadius = 180.f;
     int branchCount = static_cast<int>(m_branchIndices.size());
 
     for (int b = 0; b < branchCount; ++b)
@@ -50,7 +43,7 @@ SkillTree::SkillTree() : m_skillPoints(0)
         for (int t = 0; t < static_cast<int>(indices.size()); ++t)
         {
             int skillIndex = indices[t];
-            float dist = 80.f + t * 70.f; // move outwards per tier
+            float dist = 80.f + t * 90.f;
             sf::Vector2f pos = center + branchDir * dist;
 
             sf::CircleShape node(30.f);
@@ -59,7 +52,6 @@ SkillTree::SkillTree() : m_skillPoints(0)
             node.setFillColor(sf::Color(100, 100, 100));
             node.setOutlineThickness(3.f);
             node.setOutlineColor(sf::Color::White);
-
             m_nodes.push_back(node);
         }
     }
@@ -67,7 +59,6 @@ SkillTree::SkillTree() : m_skillPoints(0)
     if (!m_font.openFromFile("ASSETS/FONTS/Jersey20-Regular.ttf"))
         std::cout << "Failed to load font!\n";
 }
-
 
 void SkillTree::AddSkillPoint()
 {
@@ -81,64 +72,93 @@ bool SkillTree::CanUnlock(int skillIndex)
         return false;
 
     Skill& s = m_skills[skillIndex];
-    if (s.unlocked || m_skillPoints < s.cost)
+
+    // Fully maxed
+    if (s.maxStacks > 1 && s.stackCount >= s.maxStacks) return false;
+    if (s.maxStacks == 1 && s.unlocked) return false;
+
+    // Cant afford
+    if (m_skillPoints < s.cost) return false;
+
+    // BPM locks applies to tier 0 too
+    if (s.type == Skill::Type::BPM_DAMAGE_BOOST && m_currentBPM >= 100.f)
+        return false;
+    if (s.type == Skill::Type::BPM_DEFENCE_BOOST && m_currentBPM < 130.f)
         return false;
 
-    // Find all skills in this branch and sort by tier
-    auto branch = s.branch;
-    std::vector<int> branchSkills;
-    for (int i = 0; i < static_cast<int>(m_skills.size()); ++i)
-        if (m_skills[i].branch == branch)
-            branchSkills.push_back(i);
-
-    // Starting node (tier 0) is always unlockable if you can afford it
+    // Tier 0 is always unlockable if affordable
     if (s.tier == 0) return true;
 
-    bool predecessorUnlocked = false;
-    for (int idx : branchSkills)
+    // Check previous in same branch is unlocked or has at least 1 stack
+    auto branch = s.branch;
+    for (int i = 0; i < static_cast<int>(m_skills.size()); ++i)
     {
-        if (m_skills[idx].tier == s.tier - 1 && m_skills[idx].unlocked)
+        if (m_skills[i].branch == branch && m_skills[i].tier == s.tier - 1)
         {
-            predecessorUnlocked = true;
-            break;
+            if (m_skills[i].unlocked || m_skills[i].stackCount > 0)
+                return true;
         }
     }
 
-    return predecessorUnlocked;
+    return false;
 }
-
 
 void SkillTree::UnlockSkill(int skillIndex)
 {
-    if (!CanUnlock(skillIndex))
-        return;
+    if (!CanUnlock(skillIndex)) return;
 
     auto& s = m_skills[skillIndex];
-    s.unlocked = true;
     m_skillPoints -= s.cost;
 
+    if (s.maxStacks > 1)
+    {
+        s.stackCount++;
+        // Cost scales up each stack
+        s.cost = static_cast<int>(s.cost * 1.8f);
+
+        if (s.stackCount >= s.maxStacks)
+            s.unlocked = true;
+    }
+    else
+    {
+        s.unlocked = true;
+    }
+
+    // Node colour by branch
     sf::Color c;
     switch (s.branch)
     {
-    case Skill::Branch::Survivability: c = sf::Color(50, 200, 50); break;
-    case Skill::Branch::Offense:       c = sf::Color(220, 80, 80); break;
+    case Skill::Branch::Survivability: c = sf::Color(50, 200, 50);  break;
+    case Skill::Branch::Offense:       c = sf::Color(220, 80, 80);  break;
     case Skill::Branch::Mobility:      c = sf::Color(80, 180, 220); break;
     case Skill::Branch::Rhythm:        c = sf::Color(200, 200, 80); break;
     }
+
+    // Dim slightly if not  maxed 
+    if (s.maxStacks > 1 && !s.unlocked)
+        c = sf::Color(c.r / 2, c.g / 2, c.b / 2);
+
     m_nodes[skillIndex].setFillColor(c);
-
-    std::cout << "Unlocked: " << s.name << "\n";
+    std::cout << "Unlocked: " << s.name << " (stack " << s.stackCount << "/" << s.maxStacks << ")\n";
 }
-
 
 bool SkillTree::IsSkillUnlocked(int skillIndex)
 {
-    return m_skills[skillIndex].unlocked;
+    if (skillIndex < 0 || skillIndex >= static_cast<int>(m_skills.size()))
+        return false;
+    return m_skills[skillIndex].unlocked || m_skills[skillIndex].stackCount > 0;
+}
+
+int SkillTree::GetStackCount(int skillIndex)
+{
+    if (skillIndex < 0 || skillIndex >= static_cast<int>(m_skills.size()))
+        return 0;
+    return m_skills[skillIndex].stackCount;
 }
 
 void SkillTree::Draw(sf::RenderWindow& window)
 {
-    // Draw connecting lines
+    // Draw conecting lines
     for (int b = 0; b < static_cast<int>(m_branchIndices.size()); ++b)
     {
         const auto& indices = m_branchIndices[b];
@@ -150,16 +170,16 @@ void SkillTree::Draw(sf::RenderWindow& window)
             sf::Vector2f bPos = m_nodes[idxB].getPosition();
 
             std::array<sf::Vertex, 2> line = {
-                sf::Vertex{a, sf::Color(150,150,150)},
-                sf::Vertex{bPos, sf::Color(150,150,150)}
+                sf::Vertex{a,    sf::Color(150, 150, 150)},
+                sf::Vertex{bPos, sf::Color(150, 150, 150)}
             };
             window.draw(line.data(), line.size(), sf::PrimitiveType::Lines);
         }
     }
 
+    // Draw nodes an stack numbers
     for (size_t i = 0; i < m_nodes.size(); ++i)
     {
-        // Highlight hovered node
         if (static_cast<int>(i) == m_hoveredNodeIndex)
         {
             m_nodes[i].setOutlineThickness(5.f);
@@ -172,29 +192,45 @@ void SkillTree::Draw(sf::RenderWindow& window)
         }
 
         window.draw(m_nodes[i]);
+
+        // Stack number on node
+        if (m_skills[i].maxStacks > 1)
+        {
+            sf::Text stackText{ m_font };
+            stackText.setCharacterSize(16);
+            stackText.setFillColor(sf::Color::White);
+            stackText.setString(std::to_string(m_skills[i].stackCount)
+                + "/" + std::to_string(m_skills[i].maxStacks));
+            sf::FloatRect bounds = stackText.getLocalBounds();
+            stackText.setPosition(
+                m_nodes[i].getPosition() - sf::Vector2f(bounds.size.x / 2.f, bounds.size.y / 2.f)
+            );
+            window.draw(stackText);
+        }
     }
 
-    // Draw nodes
-    for (auto& node : m_nodes)
-        window.draw(node);
-
-    // Draw skill points text
+    // Skill points
     sf::Text pointsText{ m_font };
-    pointsText.setFont(m_font);
     pointsText.setString("Skill Points: " + std::to_string(m_skillPoints));
     pointsText.setCharacterSize(24);
     pointsText.setPosition(sf::Vector2f(50.f, 50.f));
     window.draw(pointsText);
 
-    sf::Text instructionsText{m_font};
-    instructionsText.setFont(m_font);
+    // BPM indicator for rhythm branch
+    sf::Text bpmText{ m_font };
+    bpmText.setCharacterSize(18);
+    bpmText.setFillColor(sf::Color(200, 200, 80));
+    bpmText.setString("Current BPM: " + std::to_string((int)m_currentBPM));
+    bpmText.setPosition(sf::Vector2f(50.f, 80.f));
+    window.draw(bpmText);
+
+    sf::Text instructionsText{ m_font };
     instructionsText.setString("Press T to close | Click nodes to unlock | Hover for info");
     instructionsText.setCharacterSize(18);
     instructionsText.setFillColor(sf::Color(200, 200, 200));
     instructionsText.setPosition(sf::Vector2f(50.f, 750.f));
     window.draw(instructionsText);
 
-    // Draw tooltip if hovering over a node
     if (m_hoveredNodeIndex >= 0)
     {
         sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
@@ -209,81 +245,137 @@ void SkillTree::HandleClick(sf::Vector2f mousePos)
     {
         if (m_nodes[i].getGlobalBounds().contains(mousePos))
         {
-            UnlockSkill(i);
+            UnlockSkill(static_cast<int>(i));
             return;
         }
     }
 }
 
-void SkillTree::DrawTooltip(sf::RenderWindow& window, int skillIndex, sf::Vector2f mousePo0s)
+void SkillTree::DrawTooltip(sf::RenderWindow& window, int skillIndex, sf::Vector2f mousePos)
 {
     const Skill& skill = m_skills[skillIndex];
 
-    // Create tooltip background
     sf::RectangleShape tooltipBox;
-    tooltipBox.setSize(sf::Vector2f(250.f, 100.f));
-    tooltipBox.setFillColor(sf::Color(40, 40, 40, 230)); 
+    tooltipBox.setSize(sf::Vector2f(260.f, 120.f));
+    tooltipBox.setFillColor(sf::Color(40, 40, 40, 230));
     tooltipBox.setOutlineThickness(2.f);
     tooltipBox.setOutlineColor(sf::Color::White);
 
-    // Position tooltip near mouse (
-    sf::Vector2f tooltipPos = mousePo0s + sf::Vector2f(20.f, 20.f);
-
-    // Keep tooltip on screen
-    if (tooltipPos.x + 250.f > window.getSize().x)
-        tooltipPos.x = mousePo0s.x - 270.f;
-    if (tooltipPos.y + 100.f > window.getSize().y)
-        tooltipPos.y = mousePo0s.y - 120.f;
+    sf::Vector2f tooltipPos = mousePos + sf::Vector2f(20.f, 20.f);
+    if (tooltipPos.x + 260.f > window.getSize().x) tooltipPos.x = mousePos.x - 280.f;
+    if (tooltipPos.y + 120.f > window.getSize().y) tooltipPos.y = mousePos.y - 140.f;
 
     tooltipBox.setPosition(tooltipPos);
     window.draw(tooltipBox);
 
-    // Skill name 
     sf::Text nameText{ m_font };
-    nameText.setFont(m_font);
     nameText.setString(skill.name);
-    nameText.setCharacterSize(22);
+    nameText.setCharacterSize(20);
     nameText.setFillColor(skill.unlocked ? sf::Color::Green : sf::Color::Yellow);
-    nameText.setPosition(tooltipPos + sf::Vector2f(10.f, 10.f));
+    nameText.setPosition(tooltipPos + sf::Vector2f(10.f, 8.f));
     window.draw(nameText);
 
-    // Description
     sf::Text descText{ m_font };
-    descText.setFont(m_font);
     descText.setString(skill.description);
-    descText.setCharacterSize(18);
+    descText.setCharacterSize(16);
     descText.setFillColor(sf::Color::White);
-    descText.setPosition(tooltipPos + sf::Vector2f(10.f, 40.f));
+    descText.setPosition(tooltipPos + sf::Vector2f(10.f, 36.f));
     window.draw(descText);
 
-    // Cost
-    sf::Text costText{ m_font };
-    costText.setFont(m_font);
-    if (skill.unlocked)
+    // Stack info
+    std::string costStr;
+    if (skill.unlocked && skill.maxStacks == 1)
     {
-        costText.setString("UNLOCKED");
-        costText.setFillColor(sf::Color::Green);
+        costStr = "UNLOCKED";
+    }
+    else if (skill.maxStacks > 1)
+    {
+        costStr = "Stacks: " + std::to_string(skill.stackCount) + "/" + std::to_string(skill.maxStacks);
+        costStr += "  Next: " + std::to_string(skill.cost) + " SP";
     }
     else
     {
-        costText.setString("Cost: " + std::to_string(skill.cost) + " SP");
-        costText.setFillColor(CanUnlock(skillIndex) ? sf::Color::White : sf::Color::Red);
+        costStr = "Cost: " + std::to_string(skill.cost) + " SP";
     }
-    costText.setCharacterSize(18);
-    costText.setPosition(tooltipPos + sf::Vector2f(10.f, 68.f));
+
+    sf::Text costText{ m_font };
+    costText.setString(costStr);
+    costText.setCharacterSize(16);
+    costText.setFillColor(CanUnlock(skillIndex) ? sf::Color::White : sf::Color::Red);
+    costText.setPosition(tooltipPos + sf::Vector2f(10.f, 60.f));
     window.draw(costText);
+
+    // BPM lock 
+    if (skill.type == Skill::Type::BPM_DAMAGE_BOOST && m_currentBPM > 100.f)
+    {
+        sf::Text lockText{ m_font };
+        lockText.setString("Requires low BPM < 100");
+        lockText.setCharacterSize(14);
+        lockText.setFillColor(sf::Color(255, 100, 100));
+        lockText.setPosition(tooltipPos + sf::Vector2f(10.f, 85.f));
+        window.draw(lockText);
+    }
+    if (skill.type == Skill::Type::BPM_DEFENCE_BOOST && m_currentBPM < 145.f)
+    {
+        sf::Text lockText{ m_font };
+        lockText.setString("Requires high BPM > 145");
+        lockText.setCharacterSize(14);
+        lockText.setFillColor(sf::Color(255, 100, 100));
+        lockText.setPosition(tooltipPos + sf::Vector2f(10.f, 85.f));
+        window.draw(lockText);
+    }
 }
 
 void SkillTree::UpdateHover(sf::Vector2f mousePos)
 {
-    m_hoveredNodeIndex = -1;  // Reset hover state
-
+    m_hoveredNodeIndex = -1;
     for (size_t i = 0; i < m_nodes.size(); ++i)
     {
         if (m_nodes[i].getGlobalBounds().contains(mousePos))
         {
             m_hoveredNodeIndex = static_cast<int>(i);
-            return;  // Found hovered node, stop checking
+            return;
         }
     }
+}
+
+
+SkillTree::SkillModifiers SkillTree::GetModifiers()
+{
+    SkillModifiers mods;
+
+    for (auto& s : m_skills)
+    {
+        if (!s.unlocked && s.stackCount == 0) continue;
+
+        switch (s.type)
+        {
+        case Skill::Type::EXTRA_HEAL:
+            mods.bonusHeals++;
+            break;
+        case Skill::Type::EXTRA_HEALTH:
+            mods.bonusMaxHP += 20;
+            break;
+        case Skill::Type::OVERHEAL:
+            mods.overhealCap = 1.0f + (s.stackCount * 0.1f);
+            break;
+        case Skill::Type::MULTIPLIER_BOOST:
+            mods.baseComboMultiplier = 1.0f + (s.stackCount * 0.5f);
+            break;
+        case Skill::Type::ATTACK_SPEED:
+            mods.hasAttackSpeed = true;
+            break;
+        case Skill::Type::PERFECT_BLOCK_BONUS:
+            mods.hasPerfectParry = true;
+            mods.perfectParryStacks = s.stackCount;
+            break;
+        case Skill::Type::BPM_DAMAGE_BOOST:
+            mods.bpmDamageBoost = 1.0f + (s.stackCount * 0.2f);
+            break;
+        case Skill::Type::BPM_DEFENCE_BOOST:
+            mods.bpmDefenceBoost = 1.0f + (s.stackCount * 0.15f);
+            break;
+        }
+    }
+    return mods;
 }

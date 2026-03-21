@@ -19,21 +19,38 @@ public:
             Rhythm
         } branch;
 
-        int tier = 0;          // 0 = starting node in that branch
+        int tier = 0;          // 0 starting node in that branch
 
         enum class Type {
             EXTRA_HEAL,
             EXTRA_HEALTH,
-            DASH,
-            SPECIAL_ATTACK,
-            HEAL_ON_KILL,
-            CRIT_CHANCE,
+            OVERHEAL,
+            MULTIPLIER_BOOST,
             ATTACK_SPEED,
             PERFECT_BLOCK_BONUS,
             BPM_DAMAGE_BOOST,
             BPM_DEFENCE_BOOST
         } type;
+        int stackCount = 0;  
+        int maxStacks = 1; //non stackable
+
+        
     };
+    struct SkillModifiers
+    {
+        int bonusHeals = 0;
+        int bonusMaxHP = 0;
+        float overhealCap = 1.0f;
+        float baseComboMultiplier = 1.0f;
+        bool hasAttackSpeed = false;
+        bool hasPerfectParry = false;
+        int perfectParryStacks = 0;
+        float bpmDamageBoost = 1.0f;
+        float bpmDefenceBoost = 1.0f;
+    };
+
+    SkillModifiers GetModifiers();
+
     std::vector<std::vector<int>> m_branchIndices;
 
     SkillTree();
@@ -43,6 +60,7 @@ public:
     bool CanUnlock(int skillIndex);          // Check if affordable
     void UnlockSkill(int skillIndex);        // Purchase skill
     bool IsSkillUnlocked(int skillIndex);    // Check if player has it
+    int GetStackCount(int skillIndex);
 
     // UI
     void Draw(sf::RenderWindow& window);
@@ -50,6 +68,10 @@ public:
     void UpdateHover(sf::Vector2f mousePos);
 
     int GetSkillPoints() { return m_skillPoints; }
+
+    void SetCurrentBPM(float bpm) { m_currentBPM = bpm; }
+    float m_currentBPM = 120.f;
+
 
 private:
     std::vector<Skill> m_skills;

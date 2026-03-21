@@ -217,10 +217,6 @@ void Game::initializeGame()
 	// USE HUB CLASS TO LOAD
 	m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_windowSize);
 
-	if (!m_useSpotify)
-	{
-		m_bpmStream.setVolume(0.f);
-	}
 
 	m_screenEffect.initialize(m_windowSize);
 	m_screenEffect.initializeHubLighting(0.85f); // Very dark! (0-1)
@@ -435,10 +431,30 @@ void Game::update(sf::Time t_deltaTime)
 	// ===== STATE-BASED UPDATE =====
 	if (m_isInHub)
 	{
-		// USE HUB CLASS TO UPDATE
+		float rawBPM = 0.f;
+		if (m_useSpotify)
+		{
+			auto trackInfo = m_spotifyClient.GetCurrentTrack();
+			rawBPM = trackInfo.bpm;
+		}
+		else
+		{
+			rawBPM = m_bpmStream.getCurrentBPM();
+		}
+
+		if (rawBPM > 0.f)
+		{
+			static float hubSmoothedBPM = 120.f;
+			hubSmoothedBPM += (rawBPM - hubSmoothedBPM) * 0.05f;
+			m_currentBPM = hubSmoothedBPM;
+		}
+
+		m_skillTree.SetCurrentBPM(m_currentBPM);
 		if (m_hub.Update(dt, m_Player))
 		{
 			std::cout << "\n=== STARTING EXPEDITION ===" << std::endl;
+
+			m_Player.health = m_Player.MAX_HEALTH;
 
 			m_isInHub = false;
 			m_currentGameTheme = GameTheme::Forest;
@@ -477,6 +493,14 @@ void Game::update(sf::Time t_deltaTime)
 			m_Player.velocity = { 0.f, 0.f };
 			m_cameraOffset = { 0.f, 0.f };
 
+			// Apply skill modifiers on expedition start
+			SkillTree::SkillModifiers startMods = m_skillTree.GetModifiers();
+			m_Player.MAX_HEALTH = 100 + startMods.bonusMaxHP;
+			m_Player.health = m_Player.MAX_HEALTH;
+			m_Player.HealsCount = 2 + startMods.bonusHeals;
+			m_Player.HealCall();
+			m_Player.Health();
+
 			// Spawn enemies
 			m_enemySpawnManager.ForceSpawn({ 850.f, 746.f }, m_enemies);
 			m_enemySpawnManager.ForceSpawn({ 1150.f, 746.f }, m_enemies);
@@ -490,8 +514,6 @@ void Game::update(sf::Time t_deltaTime)
 		// Update background
 		m_dynamicBackground.update(m_cameraOffset);
 		m_gameTimer += dt;
-
-		m_bpmStream.setVolume(0.f);
 
 		// BPM processing
 		float rawBPM = 0.f;
@@ -590,9 +612,13 @@ void Game::update(sf::Time t_deltaTime)
 			m_screenEffect.setMode(ScreenEffect::Mode::Hub);
 
 			// Reset player safely
+			SkillTree::SkillModifiers mods = m_skillTree.GetModifiers();
+			m_Player.MAX_HEALTH = 100 + mods.bonusMaxHP;
 			m_Player.health = m_Player.MAX_HEALTH;
+			m_Player.HealsCount = 2 + mods.bonusHeals;
+			m_Player.HealCall();
+			m_Player.Health();
 			m_Player.velocity = { 0.f, 0.f };
-			m_screenEffect.setMode(ScreenEffect::Mode::Hub);
 		}
 
 
@@ -604,6 +630,29 @@ void Game::update(sf::Time t_deltaTime)
 			fuzzyParams.spawnRate,    
 			3                         
 		));
+
+		// Skill modifiers
+		SkillTree::SkillModifiers mods = m_skillTree.GetModifiers();
+
+		m_Player.MAX_HEALTH = 100 + mods.bonusMaxHP;
+
+		float damageMultiplier = 1.0f;
+		if (m_currentBPM < 100.f)
+			damageMultiplier = mods.bpmDamageBoost;
+
+		float damageReduction = 1.0f;
+		if (m_currentBPM >= 130.f)
+			damageReduction = mods.bpmDefenceBoost;
+
+		if (mods.baseComboMultiplier > 1.0f)
+			m_Player.m_damageMultiplier = std::max(m_Player.m_damageMultiplier, mods.baseComboMultiplier);
+
+		m_Player.m_hasPerfectParry = mods.hasPerfectParry;
+		m_Player.m_perfectParryStacks = mods.perfectParryStacks;
+
+		m_Player.m_hasAttackSpeed = mods.hasAttackSpeed;
+
+		m_Player.m_overhealCap = mods.overhealCap;
 
 		for (auto& enemy : m_enemies)
 		{
@@ -748,15 +797,18 @@ void Game::update(sf::Time t_deltaTime)
 
 					if (distance < m_Player.attackHitboxRadius + 30.f)
 					{
-						int damage = static_cast<int>(1 * m_Player.m_damageMultiplier);
+						float parryBonus = m_Player.m_parryPowerHit ? 3.0f : 1.0f;
+						m_Player.m_parryPowerHit = false;
+						int damage = static_cast<int>(1 * m_Player.m_damageMultiplier * damageMultiplier * parryBonus);
 						enemy.TakeDamage(damage);
+						std::cout << "Hit Damage " << damage << " Enemy HP: " << enemy.health << std::endl;
 
 						float knockbackDir = m_Player.facingRight ? 1.f : -1.f;
 						enemy.velocity.x = knockbackDir * 200.f;
 
 						m_Player.m_hasHitThisAttack = true;
-						m_Player.canDamageEnemy = false;  
-						m_Player.m_damageMultiplier = 1.0f;  
+						m_Player.canDamageEnemy = false;
+						m_Player.m_damageMultiplier = 1.0f;
 
 						if (enemy.health <= 0)
 						{
@@ -1223,5 +1275,4 @@ bool Game::loadChunkAt(int index, float xPosition)
 		<< " (width: " << m_chunks[index].getWidth() << ")" << std::endl;
 	return true;
 }
-
 

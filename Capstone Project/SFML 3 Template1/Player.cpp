@@ -43,7 +43,6 @@ void player::Attack()
     if (velocity.x == 0.f && isOnGround)
     {
         isAttack = true;
-        m_hasHitThisAttack = false;
 
         float lungeSpeed = 150.f;
         m_attackMomentum.x = facingRight ? lungeSpeed : -lungeSpeed;
@@ -91,6 +90,21 @@ void player::Defend()
                 if (m_lastBlockTiming == -1.0f)
                 {
                     m_isPerfectParry = true;
+
+                    if (m_hasPerfectParry)
+                    {
+                        int flip = rand() % 2;
+                        if (flip == 0)
+                        {
+                            m_parrySpeedBurst = true;
+                            std::cout << "Perfect Parry: SPEED BURST!" << std::endl;
+                        }
+                        else
+                        {
+                            m_parryPowerHit = true;
+                            std::cout << "Perfect Parry: POWER HIT READY!" << std::endl;
+                        }
+                    }
                 }
                 ShowTimingFeedback(timing);
             }
@@ -110,6 +124,11 @@ void player::AnimatePlayer()
 {
     UpdateAnimationTexture();
 
+    if (state == PlayerState::Attack)
+        m_framePlus = m_hasAttackSpeed ? 0.35f : 0.2f;
+    else
+        m_framePlus = 0.2f;
+
     m_frameCount += m_framePlus;
     int frame = static_cast<int>(m_frameCount) % currentAnim->frameCount;
 
@@ -124,7 +143,7 @@ void player::AnimatePlayer()
         sprite->setOrigin(sf::Vector2f(currentAnim->frameWidth / 2.f, currentAnim->frameHeight / 2.f));
     }
 
-    if ((state == PlayerState::Attack && m_frameNow == attackAnim.frameCount - 1) ||
+    if ((state == PlayerState::Attack && m_frameNow == attackAnim.frameCount - 1)||
         (state == PlayerState::Defend && m_frameNow == defendAnim.frameCount - 1) ||
         (state == PlayerState::Healing && m_frameNow == healAnim.frameCount - 1))
     {
@@ -133,10 +152,22 @@ void player::AnimatePlayer()
             if (HealsCount > 0 || health != MAX_HEALTH)
             {
                 HealsCount -= 1;
-                health = std::min(health + 40, MAX_HEALTH); 
+                health = std::min(health + 40, static_cast<int>(MAX_HEALTH * m_overhealCap));
                 HealCall();
                 Health();
             }
+        }
+        if (state == PlayerState::Attack)
+        {
+            m_hasHitThisAttack = false;
+
+        }
+
+        if (state == PlayerState::Defend && m_parrySpeedBurst)
+        {
+            float dir = facingRight ? 1.f : -1.f;
+            velocity.x = dir * 400.f;
+            m_parrySpeedBurst = false;
         }
 
         isAttack = false;

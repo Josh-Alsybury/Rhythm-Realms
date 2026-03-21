@@ -116,7 +116,7 @@ void DynamicBackground::transitionTo(const std::string& newFolderPath)
 
 GameTheme DynamicBackground::GetThemeFromBPM(float bpm)
 {
-    if (bpm >= 130.f)
+    if (bpm >= 142.f)
         return GameTheme::Factory;
     else if (bpm >= 100.f)
         return GameTheme::Forest;
