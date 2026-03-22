@@ -6,19 +6,22 @@ FuzzyBpmController::FuzzyBpmController()
     m_lowParams.enemyHP = 7.f;
     m_lowParams.attackCooldown = 2.0f;
     m_lowParams.spawnRate =6.0f;
-    m_lowParams.attackWindowSize = 1.4f;  
+    m_lowParams.attackWindowSize = 1.4f;
+    m_lowParams.xpMultiplier = 1.6f;
 
     m_mediumParams.enemySpeed = 130.f;
     m_mediumParams.enemyHP = 5.f;
     m_mediumParams.attackCooldown = 1.5f;
     m_mediumParams.spawnRate = 3.5f;
     m_mediumParams.attackWindowSize = 1.0f;
+    m_mediumParams.xpMultiplier = 1.0f;
 
     m_highParams.enemySpeed = 200.f;
     m_highParams.enemyHP = 2.f;
     m_highParams.attackCooldown = 0.6f;
     m_highParams.spawnRate = 1.0f;
     m_highParams.attackWindowSize = 0.7f;
+    m_highParams.xpMultiplier = 0.7f;
 }
 
 float FuzzyBpmController::membershipLow(float bpm)
@@ -55,6 +58,7 @@ FuzzyGameParams FuzzyBpmController::defuzzify(float low, float medium, float hig
     result.attackCooldown = (low * m_lowParams.attackCooldown + medium * m_mediumParams.attackCooldown + high * m_highParams.attackCooldown) / total;
     result.spawnRate = (low * m_lowParams.spawnRate + medium * m_mediumParams.spawnRate + high * m_highParams.spawnRate) / total;
     result.attackWindowSize = (low * m_lowParams.attackWindowSize + medium * m_mediumParams.attackWindowSize + high * m_highParams.attackWindowSize) / total;
+    result.xpMultiplier = (low * m_lowParams.xpMultiplier + medium * m_mediumParams.xpMultiplier + high * m_highParams.xpMultiplier) / total;
 
     return result;
 }

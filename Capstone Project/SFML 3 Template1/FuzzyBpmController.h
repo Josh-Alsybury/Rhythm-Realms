@@ -12,6 +12,7 @@ struct FuzzyGameParams
 	float attackCooldown;
 	float spawnRate;
 	float attackWindowSize;
+	float xpMultiplier;
 };
 
 

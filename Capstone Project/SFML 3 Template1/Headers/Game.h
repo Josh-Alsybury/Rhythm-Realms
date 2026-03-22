@@ -126,6 +126,12 @@ private:
 	std::vector<std::string> m_songPaths;
 	size_t m_currentSongIndex;
 
+	float m_playerXP = 0.f;
+	int m_playerLevel = 1;
+	float m_xpToNextLevel = 50.f;
+
+	void awardXP(float amount);
+
 	mybpm::MiniBPM m_bpmAnalyzer{ static_cast<int>(44100) };
 };
 

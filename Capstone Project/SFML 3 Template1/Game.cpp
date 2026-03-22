@@ -813,7 +813,12 @@ void Game::update(sf::Time t_deltaTime)
 						if (enemy.health <= 0)
 						{
 							std::cout << "Enemy defeated!" << std::endl;
-							m_skillTree.AddSkillPoint();
+
+							float timingMultiplier = 1.0f;
+							if (m_Player.m_damageMultiplier >= 2.0f) timingMultiplier = 2.0f;
+							else if (m_Player.m_damageMultiplier >= 1.5f) timingMultiplier = 1.5f;
+
+							awardXP(10.f * timingMultiplier * fuzzyParams.xpMultiplier);
 						}
 					}
 				}
@@ -937,7 +942,12 @@ void Game::update(sf::Time t_deltaTime)
 						if (archer.health <= 0)
 						{
 							std::cout << "Archer defeated!" << std::endl;
-							m_skillTree.AddSkillPoint();
+
+							float timingMultiplier = 1.0f;
+							if (m_Player.m_damageMultiplier >= 2.0f) timingMultiplier = 2.0f;
+							else if (m_Player.m_damageMultiplier >= 1.5f) timingMultiplier = 1.5f;
+
+							awardXP(10.f * timingMultiplier * fuzzyParams.xpMultiplier);
 						}
 					}
 				}
@@ -1152,6 +1162,25 @@ void Game::render()
 			for (int i = 0; i < m_Player.HealsCount; i++)
 				m_window.draw(m_Player.HealSphere[i]);
 
+			// XP bar
+			sf::RectangleShape xpBg({ 400.f, 12.f });
+			xpBg.setFillColor(sf::Color(40, 40, 40));
+			xpBg.setPosition({ 300.f, 780.f });
+			m_window.draw(xpBg);
+
+			float xpRatio = m_playerXP / m_xpToNextLevel;
+			sf::RectangleShape xpFill({ 400.f * xpRatio, 12.f });
+			xpFill.setFillColor(sf::Color(100, 200, 255));
+			xpFill.setPosition({ 300.f, 780.f });
+			m_window.draw(xpFill);
+
+			sf::Text levelText{ m_jerseyFont };
+			levelText.setCharacterSize(16);
+			levelText.setFillColor(sf::Color::White);
+			levelText.setString("Lv." + std::to_string(m_playerLevel));
+			levelText.setPosition({ 265.f, 774.f });
+			m_window.draw(levelText);
+
 			// Draw BPM text
 			m_window.draw(m_bpmText);
 
@@ -1276,3 +1305,15 @@ bool Game::loadChunkAt(int index, float xPosition)
 	return true;
 }
 
+void Game::awardXP(float amount)
+{
+	m_playerXP += amount;
+	while (m_playerXP >= m_xpToNextLevel)
+	{
+		m_playerXP -= m_xpToNextLevel;
+		m_playerLevel++;
+		m_xpToNextLevel *= 1.5f;
+		m_skillTree.AddSkillPoint();
+		std::cout << "Level up, Level: " << m_playerLevel << " Next level: " << m_xpToNextLevel << std::endl;
+	}
+}
