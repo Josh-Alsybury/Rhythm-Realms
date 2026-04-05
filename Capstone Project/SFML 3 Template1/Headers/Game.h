@@ -36,6 +36,7 @@
 #include "ScreenEffect.h"
 #include "BpmCombatSystem.h"
 #include "FuzzyBpmController.h"
+#include "Enemy3.h"
 #include <memory>
 
 
@@ -52,6 +53,7 @@ public:
 	std::vector<Enemy1> m_enemies;
 	std::vector<Enemy2> m_archers;     
 	std::vector<Arrow> m_arrows;
+	std::vector<Enemy3> m_executioners;
 	int distance = 0;
 
 private:
@@ -110,13 +112,17 @@ private:
 
 	bool m_showDebugCollision = false;
 
+	float m_runStartX = 500.f;
+	float m_runLength = 13000.f;
+	float m_distanceTravelled = 0.f;
+	bool m_runComplete = false;
+
 	// Enemy spawning
 	EnemySpawnManager m_enemySpawnManager;
 	float m_gameTimer;  
 
-	bool m_DELETEexitGame; // control exiting game
+	bool m_DELETEexitGame;
 	player m_Player;
-	//std::vector<Npc> m_npcs;
 	sf::Text m_bpmText{ m_jerseyFont };
 	BpmStream m_bpmStream;
 	float m_bpmPhase = 0.f; // for pulsating

@@ -21,6 +21,17 @@ struct ArcherTextures
     bool load();
 };
 
+// Textures for Executioner (Enemy3)
+struct ExecutionerTextures
+{
+    sf::Texture idle;
+    sf::Texture walk;
+    sf::Texture attack1;
+    sf::Texture attack2;
+    bool load();
+};
+
 // Global texture instances
 extern SamuraiTextures g_samuraiTextures;
 extern ArcherTextures g_archerTextures;
+extern ExecutionerTextures g_executionerTextures; 

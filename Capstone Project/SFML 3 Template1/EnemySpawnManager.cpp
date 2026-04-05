@@ -7,24 +7,26 @@
 EnemySpawnManager::EnemySpawnManager()
     : spawnCooldownTimer(0.f)
     , archerSpawnCooldownTimer(0.f)
+    , executionerSpawnCooldownTimer(0.f)
     , difficultyMultiplier(1.0f)
     , totalEnemiesSpawned(0)
     , totalArchersSpawned(0)
+    , totalExecutionersSpawned(0)
     , activeEnemyCount(0)
     , activeArcherCount(0)
+    , activeExecutionerCount(0)
     , rng(std::random_device{}())
     , distanceDistribution(800.f, 1200.f)
     , heightVariation(-20.f, 20.f)
 {
-    config = EnemySpawnConfig(); // Default for melee enemies
-    archerConfig = EnemySpawnConfig(900.f, 1500.f, 5.0f, 2); // Archers spawn further, less frequently
+    config = EnemySpawnConfig();
+    archerConfig = EnemySpawnConfig(900.f, 1500.f, 5.0f, 2);
+    executionerConfig = EnemySpawnConfig(1000.f, 1600.f, 20.0f, 1);
 }
 
 void EnemySpawnManager::SetSpawnConfig(const EnemySpawnConfig& newConfig)
 {
     config = newConfig;
-
-    // Update distribution ranges
     distanceDistribution = std::uniform_real_distribution<float>(
         config.minSpawnDistance, config.maxSpawnDistance
     );
@@ -37,11 +39,13 @@ void EnemySpawnManager::SetDifficultyMultiplier(float multiplier)
 
 void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
     std::vector<Enemy1>& enemies, std::vector<Enemy2>& archers,
-    float rightmostChunkX, const std::vector<Chunk>& chunks) 
+    std::vector<Enemy3>& executioners,
+    float rightmostChunkX, const std::vector<Chunk>& chunks)
 {
     // Update cooldowns
     spawnCooldownTimer -= dt;
     archerSpawnCooldownTimer -= dt;
+    executionerSpawnCooldownTimer -= dt;
 
     // Clean up old spawn records
     static float timeSinceStart = 0.f;
@@ -50,17 +54,85 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
 
     // Count active enemies
     activeEnemyCount = 0;
-    for (const auto& enemy : enemies) {
-        if (enemy.health > 0) {
-            activeEnemyCount++;
-        }
-    }
+    for (const auto& enemy : enemies)
+        if (enemy.health > 0) activeEnemyCount++;
 
     activeArcherCount = 0;
-    for (const auto& archer : archers) {
-        if (archer.health > 0) {
-            activeArcherCount++;
+    for (const auto& archer : archers)
+        if (archer.health > 0) activeArcherCount++;
+
+    activeExecutionerCount = 0;
+    for (const auto& executioner : executioners)
+        if (executioner.health > 0) activeExecutionerCount++;
+
+    // ========== EXECUTIONER SPAWNING ==========
+    // Debug: always log timer state so we can see what's blocking it
+    static float execDebugTimer = 0.f;
+    execDebugTimer += dt;
+    if (execDebugTimer >= 2.f)
+    {
+        execDebugTimer = 0.f;
+        std::cout << "[EXEC] Timer: " << executionerSpawnCooldownTimer
+            << " Active: " << activeExecutionerCount
+            << " Max: " << executionerConfig.maxActiveEnemies
+            << " VectorSize: " << executioners.size() << std::endl;
+    }
+
+    bool shouldSpawnExecutioner = executionerSpawnCooldownTimer <= 0.f
+        && activeExecutionerCount < executionerConfig.maxActiveEnemies;
+
+    if (shouldSpawnExecutioner)
+    {
+        std::uniform_real_distribution<float> execDistDist(
+            executionerConfig.minSpawnDistance, executionerConfig.maxSpawnDistance
+        );
+
+        float execSpawnDistance = execDistDist(rng);
+        float execSpawnX = playerPos.x + execSpawnDistance;
+
+        float maxSpawnX = rightmostChunkX - 200.f;
+        if (execSpawnX > maxSpawnX)
+            execSpawnX = maxSpawnX;
+
+        bool spawned = false;
+        for (auto& executioner : executioners)
+        {
+            if (executioner.health <= 0)
+            {
+                float spawnY = GetSpawnY(execSpawnX, chunks, playerPos.y);
+
+                executioner.SetupEnemy3();
+                executioner.Reset();
+                executioner.pos = { execSpawnX, spawnY };
+                executioner.sprite->setPosition(executioner.pos);
+
+                recentSpawns.emplace_back(execSpawnX, timeSinceStart);
+                totalExecutionersSpawned++;
+                spawned = true;
+
+                std::cout << "!!! RARE SPAWN: Executioner recycled at X: " << execSpawnX << " !!!" << std::endl;
+                break;
+            }
         }
+
+        if (!spawned && executioners.size() < static_cast<size_t>(executionerConfig.maxActiveEnemies))
+        {
+            executioners.emplace_back();
+            auto& newExecutioner = executioners.back();
+            newExecutioner.SetupEnemy3();
+
+            float spawnY = GetSpawnY(execSpawnX, chunks, playerPos.y);
+            newExecutioner.pos = { execSpawnX, spawnY };
+            newExecutioner.sprite->setPosition(newExecutioner.pos);
+
+            recentSpawns.emplace_back(execSpawnX, timeSinceStart);
+            totalExecutionersSpawned++;
+
+            std::cout << "!!! RARE SPAWN: NEW Executioner created at X: " << execSpawnX << " !!!" << std::endl;
+        }
+
+        float adjustedCooldown = executionerConfig.spawnCooldown / difficultyMultiplier;
+        executionerSpawnCooldownTimer = adjustedCooldown;
     }
 
     // ========== MELEE ENEMY SPAWNING ==========
@@ -100,7 +172,7 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
                 auto& newEnemy = enemies.back();
                 newEnemy.SetupEnemy1();
 
-                float spawnY = GetSpawnY(spawnX, chunks);  
+                float spawnY = GetSpawnY(spawnX, chunks);
                 newEnemy.pos = { spawnX, spawnY };
                 newEnemy.sprite->setPosition(newEnemy.pos);
 
@@ -125,7 +197,6 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
 
     if (shouldSpawnArcher)
     {
-        // Use archer's longer spawn distance
         std::uniform_real_distribution<float> archerDistDist(
             archerConfig.minSpawnDistance, archerConfig.maxSpawnDistance
         );
@@ -133,7 +204,6 @@ void EnemySpawnManager::Update(float dt, sf::Vector2f playerPos,
         float archerSpawnDistance = archerDistDist(rng);
         float archerSpawnX = playerPos.x + archerSpawnDistance;
 
-        // Clamp to chunk bounds
         float maxSpawnX = rightmostChunkX - 200.f;
         if (archerSpawnX > maxSpawnX)
             archerSpawnX = maxSpawnX;
@@ -238,21 +308,55 @@ void EnemySpawnManager::ForceSpawnArcher(
         }
     }
 
-    // --- CAP CHECK ---
     if (archers.size() >= static_cast<size_t>(archerConfig.maxActiveEnemies))
         return;
 
-    // --- CREATE NEW ARCHER ---
     archers.emplace_back();
     auto& newArcher = archers.back();
 
-    newArcher.SetupEnemy2();   // textures + sprite
-    newArcher.Reset();         // reset state
+    newArcher.SetupEnemy2();
+    newArcher.Reset();
     newArcher.pos = position;
     newArcher.sprite->setPosition(newArcher.pos);
 
     totalArchersSpawned++;
     std::cout << "Force spawned NEW archer at ("
+        << position.x << ", " << position.y << ")\n";
+}
+
+void EnemySpawnManager::ForceSpawnExecutioner(
+    sf::Vector2f position,
+    std::vector<Enemy3>& executioners)
+{
+    for (auto& executioner : executioners)
+    {
+        if (executioner.health <= 0)
+        {
+            executioner.SetupEnemy3();
+            executioner.Reset();
+            executioner.pos = position;
+            executioner.sprite->setPosition(executioner.pos);
+
+            totalExecutionersSpawned++;
+            std::cout << "Force spawned EXECUTIONER at ("
+                << position.x << ", " << position.y << ")\n";
+            return;
+        }
+    }
+
+    if (executioners.size() >= static_cast<size_t>(executionerConfig.maxActiveEnemies))
+        return;
+
+    executioners.emplace_back();
+    auto& newExecutioner = executioners.back();
+
+    newExecutioner.SetupEnemy3();
+    newExecutioner.Reset();
+    newExecutioner.pos = position;
+    newExecutioner.sprite->setPosition(newExecutioner.pos);
+
+    totalExecutionersSpawned++;
+    std::cout << "Force spawned NEW EXECUTIONER at ("
         << position.x << ", " << position.y << ")\n";
 }
 
@@ -264,21 +368,14 @@ float EnemySpawnManager::GetRandomSpawnX(sf::Vector2f playerPos, float rightmost
     float maxSpawnX = rightmostChunkX - 200.f;
 
     if (potentialSpawnX > maxSpawnX)
-    {
         potentialSpawnX = maxSpawnX;
-    }
 
     return potentialSpawnX;
 }
 
-float EnemySpawnManager::GetSpawnY(float spawnX, const std::vector<Chunk>& chunks)
+float EnemySpawnManager::GetSpawnY(float spawnX, const std::vector<Chunk>& chunks, float searchStartY)
 {
-    // Start searching from a base height
-    float searchStartY = 500.f;
-
-    // Use unified collision system to find ground
     float groundY = EnemyCollision::FindGroundY(spawnX, searchStartY, chunks, 300.f);
-
     return groundY;
 }
 
@@ -288,11 +385,8 @@ bool EnemySpawnManager::CanSpawnAt(float worldX)
     {
         float distance = std::abs(worldX - record.worldX);
         if (distance < MIN_SPAWN_SEPARATION)
-        {
             return false;
-        }
     }
-
     return true;
 }
 
@@ -333,9 +427,12 @@ void EnemySpawnManager::DrawDebugInfo(sf::RenderWindow& window,
         + std::to_string(config.maxActiveEnemies);
     info += " | Archers: " + std::to_string(activeArcherCount) + "/"
         + std::to_string(archerConfig.maxActiveEnemies);
-    info += "\nTotal Spawned: " + std::to_string(totalEnemiesSpawned + totalArchersSpawned);
+    info += " | Executioners: " + std::to_string(activeExecutionerCount) + "/"
+        + std::to_string(executionerConfig.maxActiveEnemies);
+    info += "\nTotal Spawned: " + std::to_string(totalEnemiesSpawned + totalArchersSpawned + totalExecutionersSpawned);
     info += "\nNext Melee: " + std::to_string(static_cast<int>(spawnCooldownTimer)) + "s";
     info += " | Next Archer: " + std::to_string(static_cast<int>(archerSpawnCooldownTimer)) + "s";
+    info += " | Next Exec: " + std::to_string(static_cast<int>(executionerSpawnCooldownTimer)) + "s";
     info += "\nDifficulty: " + std::to_string(difficultyMultiplier).substr(0, 4) + "x";
 
     debugText.setString(info);

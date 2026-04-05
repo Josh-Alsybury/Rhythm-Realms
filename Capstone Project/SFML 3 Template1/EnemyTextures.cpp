@@ -3,6 +3,7 @@
 // Global instances
 SamuraiTextures g_samuraiTextures;
 ArcherTextures g_archerTextures;
+ExecutionerTextures g_executionerTextures;
 
 bool SamuraiTextures::load()
 {
@@ -18,4 +19,12 @@ bool ArcherTextures::load()
         && run.loadFromFile("ASSETS/IMAGES/Samurai_Archer/RUN.png")
         && attack.loadFromFile("ASSETS/IMAGES/Samurai_Archer/ATTACK.png")
         && defend.loadFromFile("ASSETS/IMAGES/Samurai_Archer/BLOCK.png");
+}
+
+bool ExecutionerTextures::load()
+{
+    return idle.loadFromFile("ASSETS/IMAGES/Executioner/IDLE.png")
+        && walk.loadFromFile("ASSETS/IMAGES/Executioner/WALK.png")
+        && attack1.loadFromFile("ASSETS/IMAGES/Executioner/ATTACK 1.png")
+        && attack2.loadFromFile("ASSETS/IMAGES/Executioner/ATTACK 2.png");
 }

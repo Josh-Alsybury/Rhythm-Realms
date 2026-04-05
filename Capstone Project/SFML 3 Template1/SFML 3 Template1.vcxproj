@@ -37,6 +37,7 @@
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Enemy1.h" />
     <ClInclude Include="Enemy2.h" />
+    <ClInclude Include="Enemy3.h" />
     <ClInclude Include="EnemyCollision.h" />
     <ClInclude Include="EnemySpawnManager.h" />
     <ClInclude Include="EnemyTextures.h" />
@@ -68,6 +69,7 @@
     <ClCompile Include="DynamicBackground.cpp" />
     <ClCompile Include="Enemy1.cpp" />
     <ClCompile Include="Enemy2.cpp" />
+    <ClCompile Include="Enemy3.cpp" />
     <ClCompile Include="EnemySpawnManager.cpp" />
     <ClCompile Include="EnemyTextures.cpp" />
     <ClCompile Include="FuzzyBpmController.cpp" />

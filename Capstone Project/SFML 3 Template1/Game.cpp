@@ -26,7 +26,7 @@ Game::Game() :
 
 	m_gameView = m_window.getDefaultView();
 
-	if (!g_samuraiTextures.load() || !g_archerTextures.load())
+	if (!g_samuraiTextures.load() || !g_archerTextures.load() || !g_executionerTextures.load())
 	{
 		throw std::runtime_error("Failed to load enemy textures");
 	}
@@ -213,6 +213,12 @@ void Game::initializeGame()
 	m_enemies.clear();
 	m_archers.clear();
 	m_arrows.clear();
+	m_executioners.clear();
+
+	m_runStartX = 500.f;
+	m_distanceTravelled = 0.f;
+	m_runComplete = false; // reset of run 
+
 
 	// USE HUB CLASS TO LOAD
 	m_hub.Load(m_tilesetTexture, m_chunks, m_Player, m_chunkWidth, m_jerseyFont, m_windowSize);
@@ -335,26 +341,18 @@ void Game::update(sf::Time t_deltaTime)
 		{
 			hubWidth += chunk.getWidth();
 		}
-
 		m_Player.health = m_Player.MAX_HEALTH;
-
 		float viewWidth = m_windowSize.x;
 		float viewHeight = m_windowSize.y;
-
-		// Clamp to hub boundaries
 		float minCameraX = 0.f;
-		float rightPadding = 450.f; 
+		float rightPadding = 450.f;
 		float maxCameraX = std::max(0.f, hubWidth - viewWidth - rightPadding);
-
 		float targetCameraX = m_Player.pos.x - viewWidth * 0.5f;
 		m_cameraOffset.x = targetCameraX;
-
 		m_cameraOffset.x = std::clamp(m_cameraOffset.x, minCameraX, maxCameraX);
-
 		m_gameView.setSize({ viewWidth, viewHeight });
 		m_gameView.setCenter({ m_cameraOffset.x + viewWidth / 2.f,
 			m_cameraOffset.y + viewHeight / 2.f });
-
 		m_screenEffect.updateHub(dt);
 	}
 	else
@@ -363,10 +361,13 @@ void Game::update(sf::Time t_deltaTime)
 		float rightMargin = (m_windowSize.x - 150) - m_screenMargin;
 		float playerScreenX = m_Player.pos.x - m_cameraOffset.x;
 
-		if (playerScreenX > rightMargin)
-			m_cameraOffset.x += playerScreenX - rightMargin;
-		else if (playerScreenX < leftMargin)
-			m_cameraOffset.x -= leftMargin - playerScreenX;
+		if (!m_runComplete)
+		{
+			if (playerScreenX > rightMargin)
+				m_cameraOffset.x += playerScreenX - rightMargin;
+			else if (playerScreenX < leftMargin)
+				m_cameraOffset.x -= leftMargin - playerScreenX;
+		}
 
 		m_cameraOffset.x = std::round(m_cameraOffset.x);
 		m_cameraOffset.y = std::round(m_cameraOffset.y);
@@ -595,6 +596,7 @@ void Game::update(sf::Time t_deltaTime)
 			m_enemies.clear();
 			m_archers.clear();
 			m_arrows.clear();
+			m_executioners.clear();
 
 			// Reload hub tileset
 			std::string tilesetPath =
@@ -619,6 +621,10 @@ void Game::update(sf::Time t_deltaTime)
 			m_Player.HealCall();
 			m_Player.Health();
 			m_Player.velocity = { 0.f, 0.f };
+
+			m_runStartX = 500.f;
+			m_distanceTravelled = 0.f;
+			m_runComplete = false;
 		}
 
 
@@ -666,6 +672,12 @@ void Game::update(sf::Time t_deltaTime)
 			archer.setAttackCooldown(fuzzyParams.attackCooldown);
 			archer.MAX_HEALTH = static_cast<int>(fuzzyParams.enemyHP);
 		}
+		for (auto& executioner : m_executioners)
+		{
+			executioner.setSpeed(fuzzyParams.enemySpeed * 0.7f);  
+			executioner.setAttackCooldown(fuzzyParams.attackCooldown * 1.8f);  
+			executioner.MAX_HEALTH = static_cast<int>(fuzzyParams.enemyHP * 2.5f);  
+		}
 
 		static float debugTimer = 0.f;
 		debugTimer += dt;
@@ -694,7 +706,7 @@ void Game::update(sf::Time t_deltaTime)
 					rightmostChunkX = chunkRight;
 			}
 
-			m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, m_archers, rightmostChunkX, m_chunks);
+			m_enemySpawnManager.Update(dt, m_Player.pos, m_enemies, m_archers, m_executioners, rightmostChunkX, m_chunks);
 			float hpRatio = static_cast<float>(m_Player.health) / m_Player.MAX_HEALTH;
 			hpRatio = std::clamp(hpRatio, 0.f, 1.f);
 
@@ -953,6 +965,106 @@ void Game::update(sf::Time t_deltaTime)
 				}
 			}
 
+			for (auto& executioner : m_executioners)
+			{
+				if (executioner.health <= 0) continue;
+
+				sf::Vector2f oldPos = executioner.pos;
+				executioner.Update(dt, m_Player.pos);
+
+				// Ledge check
+				bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
+					oldPos,
+					executioner.facingRight,
+					m_chunks,
+					45.f
+				);
+
+				if (wouldFallOffLedge && executioner.velocity.x != 0.f)
+				{
+					executioner.pos.x = oldPos.x;
+					float backupDir = executioner.facingRight ? -1.f : 1.f;
+					executioner.velocity.x = backupDir * executioner.speed * 0.4f;
+					executioner.pos.x += executioner.velocity.x * dt;
+				}
+
+				EnemyCollision::CheckHorizontalCollision(executioner.pos, executioner.velocity, m_chunks, dt);
+				EnemyCollision::ApplyGravityAndGround(executioner.pos, executioner.velocity, m_chunks, dt);
+
+				if (executioner.sprite)
+					executioner.sprite->setPosition(executioner.pos);
+
+				if (executioner.pos.y > 780.f)
+				{
+					std::cout << "Executioner fell to death" << std::endl;
+					executioner.health = 0;
+					continue;
+				}
+
+				// Player attacking executioner
+				if (m_Player.canDamageEnemy && !m_Player.m_hasHitThisAttack)
+				{
+					float dx = m_Player.attackHitbox.getPosition().x - executioner.pos.x;
+					float dy = m_Player.attackHitbox.getPosition().y - executioner.pos.y;
+					float distance = std::sqrt(dx * dx + dy * dy);
+
+					if (distance < m_Player.attackHitboxRadius + 40.f)
+					{
+						float parryBonus = m_Player.m_parryPowerHit ? 3.0f : 1.0f;
+						m_Player.m_parryPowerHit = false;
+						int damage = static_cast<int>(1 * m_Player.m_damageMultiplier * damageMultiplier * parryBonus);
+						executioner.TakeDamage(damage);
+						std::cout << "Hit Executioner! Damage: " << damage << " HP: " << executioner.health << std::endl;
+
+						float knockbackDir = m_Player.facingRight ? 1.f : -1.f;
+						executioner.velocity.x = knockbackDir * 120.f; 
+
+						m_Player.m_hasHitThisAttack = true;
+						m_Player.canDamageEnemy = false;
+						m_Player.m_damageMultiplier = 1.0f;
+
+						if (executioner.health <= 0)
+						{
+							std::cout << " EXECUTIONER DEFEATED!" << std::endl;
+
+							float timingMultiplier = 1.0f;
+							if (m_Player.m_damageMultiplier >= 2.0f) timingMultiplier = 2.0f;
+							else if (m_Player.m_damageMultiplier >= 1.5f) timingMultiplier = 1.5f;
+
+							awardXP(30.f * timingMultiplier * fuzzyParams.xpMultiplier);
+						}
+					}
+				}
+
+				// Executioner attacking player
+				if (executioner.canDamagePlayer && !executioner.hasDealtDamage)
+				{
+					float dx = executioner.attackHitbox.getPosition().x - m_Player.pos.x;
+					float dy = executioner.attackHitbox.getPosition().y - m_Player.pos.y;
+					float distance = std::sqrt(dx * dx + dy * dy);
+
+					if (m_Player.canBlockEnemy)
+					{
+						std::cout << "Executioner attack BLOCKED!" << std::endl;
+						float knockbackDirection = (m_Player.pos.x > executioner.pos.x) ? 1.0f : -1.0f;
+						m_Player.velocity.x = knockbackDirection * 350.f;  // MASSIVE knockback
+						if (m_Player.isOnGround)
+							m_Player.velocity.y = -18.f;  // High bounce
+						m_Player.isKnockedBack = true;
+						m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
+						executioner.hasDealtDamage = true;
+						executioner.canDamagePlayer = false;
+					}
+					else
+					{
+						m_Player.TakeDamage(25);  // HEAVY damage
+						executioner.hasDealtDamage = true;
+						executioner.canDamagePlayer = false;
+						std::cout << "EXECUTIONER HIT PLAYER! Health: " << m_Player.health << std::endl;
+					}
+				}
+			}
+
 
 			// ========== UPDATE ARROWS (SEPARATE LOOP!) ==========
 			for (auto& arrow : m_arrows)
@@ -989,6 +1101,7 @@ void Game::update(sf::Time t_deltaTime)
 					arrow.active = false;
 				}
 			}
+
 
 			// Clean up inactive arrows
 			m_arrows.erase(
@@ -1139,6 +1252,34 @@ void Game::render()
 				}
 			}
 
+			for (auto& executioner : m_executioners)
+			{
+				if (executioner.health <= 0) continue;
+				if (!executioner.sprite) continue;
+
+				sf::Vector2f executionerRenderPos = executioner.pos - m_cameraOffset;
+				executioner.sprite->setPosition(executionerRenderPos);
+				m_window.draw(*executioner.sprite);
+
+				// Stun stars
+				if (executioner.m_isStunned)
+				{
+					for (auto& star : executioner.m_stunStars)
+					{
+						sf::CircleShape renderStar = star;
+						renderStar.setPosition(star.getPosition() - m_cameraOffset);
+						m_window.draw(renderStar);
+					}
+				}
+
+				for (auto& bar : executioner.healthBar)
+				{
+					sf::RectangleShape renderBar = bar;
+					renderBar.setPosition(bar.getPosition() - m_cameraOffset);
+					m_window.draw(renderBar);
+				}
+			}
+
 			// Render ARROWS
 			for (auto& arrow : m_arrows)
 			{
@@ -1180,6 +1321,38 @@ void Game::render()
 			levelText.setString("Lv." + std::to_string(m_playerLevel));
 			levelText.setPosition({ 265.f, 774.f });
 			m_window.draw(levelText);
+
+
+			// Render Distance meter
+			float runProgress = std::clamp(m_distanceTravelled / m_runLength, 0.f, 1.f);
+
+			// Render Background track
+			sf::RectangleShape distBg({ 400.f, 14.f });
+			distBg.setFillColor(sf::Color(40, 40, 40, 200));
+			distBg.setPosition({ 300.f, 14.f });
+			m_window.draw(distBg);
+
+			// Render Fill
+			sf::RectangleShape distFill({ 400.f * runProgress, 14.f });
+			distFill.setFillColor(sf::Color(255, 180, 50)); // gold colour
+			distFill.setPosition({ 300.f, 14.f });
+			m_window.draw(distFill);
+
+			// Render End marker
+			sf::RectangleShape endMarker({ 4.f, 14.f });
+			endMarker.setFillColor(sf::Color(220, 50, 50));
+			endMarker.setPosition({ 696.f, 14.f });
+			m_window.draw(endMarker);
+
+			// Render Text label
+			sf::Text distText{ m_jerseyFont };
+			distText.setCharacterSize(16);
+			distText.setFillColor(sf::Color::White);
+			int distRemaining = static_cast<int>(m_runLength - m_distanceTravelled);
+			distRemaining = std::max(0, distRemaining);
+			distText.setString("RUN: " + std::to_string(distRemaining) + "m remaining");
+			distText.setPosition({ 300.f, 30.f });
+			m_window.draw(distText);
 
 			// Draw BPM text
 			m_window.draw(m_bpmText);
@@ -1243,6 +1416,19 @@ void Game::setupAudio()
 void Game::updateChunks()
 {
 	float viewWidth = m_gameView.getSize().x;
+
+	m_distanceTravelled = std::max(m_distanceTravelled,
+		m_Player.pos.x - m_runStartX);
+
+	if (m_runComplete) return; // stop scrolling world
+
+	if (m_distanceTravelled >= m_runLength)
+	{
+		m_runComplete = true;
+		// tomorrow: trigger boss spawn here
+		std::cout << "=== RUN COMPLETE === BOSS INCOMING ===" << std::endl;
+		return;
+	}
 
 	// Find rightmost chunk
 	float rightmostX = -999999.0f;

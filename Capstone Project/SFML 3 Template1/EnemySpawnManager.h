@@ -5,6 +5,7 @@
 #include <random>
 #include "Enemy1.h"
 #include "Enemy2.h"
+#include "Enemy3.h"
 
 // Forward declaration
 class Chunk;
@@ -26,7 +27,6 @@ struct EnemySpawnConfig {
 struct SpawnRecord {
     float worldX;
     float timestamp;
-
     SpawnRecord(float x, float time) : worldX(x), timestamp(time) {}
 };
 
@@ -42,12 +42,14 @@ public:
     void Update(float dt, sf::Vector2f playerPos,
         std::vector<Enemy1>& enemies,
         std::vector<Enemy2>& archers,
+        std::vector<Enemy3>& executioners,  
         float rightmostChunkX,
         const std::vector<Chunk>& chunks);
 
     // Manual spawn
     void ForceSpawn(sf::Vector2f position, std::vector<Enemy1>& enemies);
     void ForceSpawnArcher(sf::Vector2f position, std::vector<Enemy2>& archers);
+    void ForceSpawnExecutioner(sf::Vector2f position, std::vector<Enemy3>& executioners);  
 
     // Getters for UI/stats
     int GetTotalEnemiesSpawned() const { return totalEnemiesSpawned; }
@@ -60,15 +62,19 @@ public:
 private:
     EnemySpawnConfig config;
     EnemySpawnConfig archerConfig;
+    EnemySpawnConfig executionerConfig;  
 
     // Spawn state
     float spawnCooldownTimer;
     float archerSpawnCooldownTimer;
+    float executionerSpawnCooldownTimer;  
     float difficultyMultiplier;
     int totalEnemiesSpawned;
     int totalArchersSpawned;
+    int totalExecutionersSpawned;  
     int activeEnemyCount;
     int activeArcherCount;
+    int activeExecutionerCount;  
 
     // Random generation
     std::mt19937 rng;
@@ -82,7 +88,7 @@ private:
 
     // Helper methods
     float GetRandomSpawnX(sf::Vector2f playerPos, float rightmostChunkX);
-    float GetSpawnY(float spawnX, const std::vector<Chunk>& chunks);  
+    float GetSpawnY(float spawnX, const std::vector<Chunk>& chunks, float searchStartY = 500.f);
     bool CanSpawnAt(float worldX);
     void CleanupOldSpawnRecords(float currentTime);
     bool IsValidSpawnPosition(float worldX, float playerX, float rightmostChunkX);
