@@ -668,12 +668,14 @@ void Game::update(sf::Time t_deltaTime)
 		}
 		for (auto& archer : m_archers)
 		{
+			if (archer.m_isBoss) continue;
 			archer.setSpeed(fuzzyParams.enemySpeed);
 			archer.setAttackCooldown(fuzzyParams.attackCooldown);
 			archer.MAX_HEALTH = static_cast<int>(fuzzyParams.enemyHP);
 		}
 		for (auto& executioner : m_executioners)
 		{
+			if (executioner.m_isBoss) continue;
 			executioner.setSpeed(fuzzyParams.enemySpeed * 0.7f);  
 			executioner.setAttackCooldown(fuzzyParams.attackCooldown * 1.8f);  
 			executioner.MAX_HEALTH = static_cast<int>(fuzzyParams.enemyHP * 2.5f);  
@@ -747,6 +749,13 @@ void Game::update(sf::Time t_deltaTime)
 			for (auto& enemy : m_enemies)
 			{
 				if (enemy.health <= 0) continue;
+
+
+				if (m_runComplete == true)
+				{
+					enemy.health = 0;
+				}
+
 
 				// Store old position
 				sf::Vector2f oldPos = enemy.pos;
@@ -868,6 +877,11 @@ void Game::update(sf::Time t_deltaTime)
 			{
 				if (archer.health <= 0) continue;
 
+				if (m_runComplete == true && !archer.m_isBoss)
+				{
+					archer.health = 0;
+				}
+
 				// Store old position
 				sf::Vector2f oldPos = archer.pos;
 
@@ -920,7 +934,7 @@ void Game::update(sf::Time t_deltaTime)
 					continue;
 				}
 
-				// Arrow spawning (your existing code)
+				// Arrow spawning 
 				if (archer.state == Enemy2::ArcherState::Attacking
 					&& archer.canDamagePlayer
 					&& !archer.hasDealtDamage)
@@ -932,7 +946,21 @@ void Game::update(sf::Time t_deltaTime)
 					std::cout << "Archer shot arrow!" << std::endl;
 				}
 
-				// Player attacking archer (your existing code)
+				if (archer.m_rainCanDamage)
+				{
+					if (m_Player.canBlockEnemy)
+					{
+						std::cout << "Rain arrow blocked!" << std::endl;
+					}
+					else
+					{
+						m_Player.TakeDamage(10);
+						std::cout << "Rain arrow hit player! Health: " << m_Player.health << std::endl;
+					}
+					archer.m_rainCanDamage = false;
+				}
+
+				// Player attacking archer 
 				if (m_Player.canDamageEnemy && !m_Player.m_hasHitThisAttack)
 				{
 					float dx = m_Player.attackHitbox.getPosition().x - archer.pos.x;
@@ -969,32 +997,41 @@ void Game::update(sf::Time t_deltaTime)
 			{
 				if (executioner.health <= 0) continue;
 
+				if (m_runComplete == true && !executioner.m_isBoss)
+				{
+					executioner.health = 0;
+					continue;
+				}
+
 				sf::Vector2f oldPos = executioner.pos;
 				executioner.Update(dt, m_Player.pos);
 
-				// Ledge check
-				bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
-					oldPos,
-					executioner.facingRight,
-					m_chunks,
-					45.f
-				);
-
-				if (wouldFallOffLedge && executioner.velocity.x != 0.f)
+				// Skip ground/ledge logic while boss is mid-jump arc
+				if (!executioner.m_isJumping)
 				{
-					executioner.pos.x = oldPos.x;
-					float backupDir = executioner.facingRight ? -1.f : 1.f;
-					executioner.velocity.x = backupDir * executioner.speed * 0.4f;
-					executioner.pos.x += executioner.velocity.x * dt;
-				}
+					bool wouldFallOffLedge = EnemyCollision::IsLedgeAhead(
+						oldPos,
+						executioner.facingRight,
+						m_chunks,
+						45.f
+					);
 
-				EnemyCollision::CheckHorizontalCollision(executioner.pos, executioner.velocity, m_chunks, dt);
-				EnemyCollision::ApplyGravityAndGround(executioner.pos, executioner.velocity, m_chunks, dt);
+					if (wouldFallOffLedge && executioner.velocity.x != 0.f)
+					{
+						executioner.pos.x = oldPos.x;
+						float backupDir = executioner.facingRight ? -1.f : 1.f;
+						executioner.velocity.x = backupDir * executioner.speed * 0.4f;
+						executioner.pos.x += executioner.velocity.x * dt;
+					}
+
+					EnemyCollision::CheckHorizontalCollision(executioner.pos, executioner.velocity, m_chunks, dt);
+					EnemyCollision::ApplyGravityAndGround(executioner.pos, executioner.velocity, m_chunks, dt);
+				}
 
 				if (executioner.sprite)
 					executioner.sprite->setPosition(executioner.pos);
 
-				if (executioner.pos.y > 780.f)
+				if (executioner.pos.y > 780.f && !executioner.m_isJumping)
 				{
 					std::cout << "Executioner fell to death" << std::endl;
 					executioner.health = 0;
@@ -1017,7 +1054,7 @@ void Game::update(sf::Time t_deltaTime)
 						std::cout << "Hit Executioner! Damage: " << damage << " HP: " << executioner.health << std::endl;
 
 						float knockbackDir = m_Player.facingRight ? 1.f : -1.f;
-						executioner.velocity.x = knockbackDir * 120.f; 
+						executioner.velocity.x = knockbackDir * 120.f;
 
 						m_Player.m_hasHitThisAttack = true;
 						m_Player.canDamageEnemy = false;
@@ -1025,42 +1062,50 @@ void Game::update(sf::Time t_deltaTime)
 
 						if (executioner.health <= 0)
 						{
-							std::cout << " EXECUTIONER DEFEATED!" << std::endl;
-
+							std::cout << "EXECUTIONER DEFEATED!" << std::endl;
 							float timingMultiplier = 1.0f;
 							if (m_Player.m_damageMultiplier >= 2.0f) timingMultiplier = 2.0f;
 							else if (m_Player.m_damageMultiplier >= 1.5f) timingMultiplier = 1.5f;
-
 							awardXP(30.f * timingMultiplier * fuzzyParams.xpMultiplier);
 						}
 					}
 				}
 
-				// Executioner attacking player
+				// Executioner boss attacking player  both melee and jump slam landing
 				if (executioner.canDamagePlayer && !executioner.hasDealtDamage)
 				{
 					float dx = executioner.attackHitbox.getPosition().x - m_Player.pos.x;
 					float dy = executioner.attackHitbox.getPosition().y - m_Player.pos.y;
 					float distance = std::sqrt(dx * dx + dy * dy);
 
-					if (m_Player.canBlockEnemy)
+					// Jump slam uses a bigger radius since its an area hit on landing
+					float hitRadius = executioner.m_hasDealtJumpDamage == false && executioner.m_isBoss
+						? 180.f  // slam radius
+						: 90.f;   // normal attack radius
+
+					if (distance < hitRadius)
 					{
-						std::cout << "Executioner attack BLOCKED!" << std::endl;
-						float knockbackDirection = (m_Player.pos.x > executioner.pos.x) ? 1.0f : -1.0f;
-						m_Player.velocity.x = knockbackDirection * 350.f;  // MASSIVE knockback
-						if (m_Player.isOnGround)
-							m_Player.velocity.y = -18.f;  // High bounce
-						m_Player.isKnockedBack = true;
-						m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
-						executioner.hasDealtDamage = true;
-						executioner.canDamagePlayer = false;
-					}
-					else
-					{
-						m_Player.TakeDamage(25);  // HEAVY damage
-						executioner.hasDealtDamage = true;
-						executioner.canDamagePlayer = false;
-						std::cout << "EXECUTIONER HIT PLAYER! Health: " << m_Player.health << std::endl;
+						if (m_Player.canBlockEnemy)
+						{
+							std::cout << "Executioner attack BLOCKED!" << std::endl;
+							float knockbackDirection = (m_Player.pos.x > executioner.pos.x) ? 1.0f : -1.0f;
+							m_Player.velocity.x = knockbackDirection * 350.f;
+							if (m_Player.isOnGround)
+								m_Player.velocity.y = -18.f;
+							m_Player.isKnockedBack = true;
+							m_Player.knockbackTimer = m_Player.KNOCKBACK_DURATION;
+							executioner.hasDealtDamage = true;
+							executioner.canDamagePlayer = false;
+						}
+						else
+						{
+							// Boss jump slam hits harder than normal melee
+							int slamDamage = (executioner.m_isBoss && !executioner.m_hasDealtJumpDamage) ? 35 : 25;
+							m_Player.TakeDamage(slamDamage);
+							executioner.hasDealtDamage = true;
+							executioner.canDamagePlayer = false;
+							std::cout << "EXECUTIONER HIT PLAYER! Health: " << m_Player.health << std::endl;
+						}
 					}
 				}
 			}
@@ -1237,6 +1282,14 @@ void Game::render()
 				if (archer.health <= 0) continue;
 				if (!archer.sprite) continue;
 
+				for (auto& ra : archer.m_rainArrows)
+				{
+					if (!ra.active) continue;
+					sf::Vector2f renderPos = ra.GetPosition() - m_cameraOffset;
+					ra.sprite.setPosition(renderPos);
+					m_window.draw(ra.sprite);
+				}
+
 				sf::Vector2f archerRenderPos = archer.pos - m_cameraOffset;
 				archer.sprite->setPosition(archerRenderPos);
 				m_window.draw(*archer.sprite);
@@ -1251,6 +1304,8 @@ void Game::render()
 					}
 				}
 			}
+
+
 
 			for (auto& executioner : m_executioners)
 			{
@@ -1274,6 +1329,7 @@ void Game::render()
 
 				for (auto& bar : executioner.healthBar)
 				{
+					if (executioner.m_isBoss) break;
 					sf::RectangleShape renderBar = bar;
 					renderBar.setPosition(bar.getPosition() - m_cameraOffset);
 					m_window.draw(renderBar);
@@ -1354,6 +1410,89 @@ void Game::render()
 			distText.setPosition({ 300.f, 30.f });
 			m_window.draw(distText);
 
+			// Boss health bar
+			for (auto& executioner : m_executioners)
+			{
+				if (!executioner.m_isBoss || executioner.health <= 0) continue;
+
+				float barWidth = 400.f;
+				float barHeight = 18.f;
+				float barX = (m_windowSize.x / 2.f) - (barWidth / 2.f);
+				float barY = 45.f;
+
+				// Name text
+				sf::Text bossName{ m_jerseyFont };
+				bossName.setCharacterSize(18);
+				bossName.setFillColor(sf::Color(220, 200, 160));
+				bossName.setString("The Executioner");
+				bossName.setPosition({ barX, barY - 22.f });
+				m_window.draw(bossName);
+
+				// Dark background
+				sf::RectangleShape bgBar({ barWidth + 4.f, barHeight + 4.f });
+				bgBar.setFillColor(sf::Color(10, 10, 10, 220));
+				bgBar.setPosition({ barX - 2.f, barY - 2.f });
+				m_window.draw(bgBar);
+
+				// Empty bar
+				sf::RectangleShape emptyBar({ barWidth, barHeight });
+				emptyBar.setFillColor(sf::Color(40, 20, 20));
+				emptyBar.setPosition({ barX, barY });
+				m_window.draw(emptyBar);
+
+				// Health fill
+				float hpRatio = static_cast<float>(executioner.health) / executioner.MAX_HEALTH;
+				sf::RectangleShape hpFill({ barWidth * hpRatio, barHeight });
+				hpFill.setFillColor(sf::Color(180, 30, 30));
+				hpFill.setPosition({ barX, barY });
+				m_window.draw(hpFill);
+
+				// Thin highlight line along top of fill for depth
+				sf::RectangleShape highlight({ barWidth * hpRatio, 3.f });
+				highlight.setFillColor(sf::Color(220, 80, 80, 160));
+				highlight.setPosition({ barX, barY });
+				m_window.draw(highlight);
+			}
+
+			// Boss health bar for Archer
+			for (auto& archer : m_archers)
+			{
+				if (!archer.m_isBoss || archer.health <= 0) continue;
+
+				float barWidth = 400.f;
+				float barHeight = 18.f;
+				float barX = (m_windowSize.x / 2.f) - (barWidth / 2.f);
+				float barY = 45.f;
+
+				sf::Text bossName{ m_jerseyFont };
+				bossName.setCharacterSize(18);
+				bossName.setFillColor(sf::Color(220, 200, 160));
+				bossName.setString("The Archer");
+				bossName.setPosition({ barX, barY - 22.f });
+				m_window.draw(bossName);
+
+				sf::RectangleShape bgBar({ barWidth + 4.f, barHeight + 4.f });
+				bgBar.setFillColor(sf::Color(10, 10, 10, 220));
+				bgBar.setPosition({ barX - 2.f, barY - 2.f });
+				m_window.draw(bgBar);
+
+				sf::RectangleShape emptyBar({ barWidth, barHeight });
+				emptyBar.setFillColor(sf::Color(20, 10, 40));
+				emptyBar.setPosition({ barX, barY });
+				m_window.draw(emptyBar);
+
+				float hpRatio = static_cast<float>(archer.health) / archer.MAX_HEALTH;
+				sf::RectangleShape hpFill({ barWidth * hpRatio, barHeight });
+				hpFill.setFillColor(sf::Color(150, 0, 255));
+				hpFill.setPosition({ barX, barY });
+				m_window.draw(hpFill);
+
+				sf::RectangleShape highlight({ barWidth * hpRatio, 3.f });
+				highlight.setFillColor(sf::Color(180, 80, 255, 160));
+				highlight.setPosition({ barX, barY });
+				m_window.draw(highlight);
+			}
+
 			// Draw BPM text
 			m_window.draw(m_bpmText);
 
@@ -1420,13 +1559,28 @@ void Game::updateChunks()
 	m_distanceTravelled = std::max(m_distanceTravelled,
 		m_Player.pos.x - m_runStartX);
 
-	if (m_runComplete) return; // stop scrolling world
+	if (m_runComplete)return;
+	
 
 	if (m_distanceTravelled >= m_runLength)
 	{
 		m_runComplete = true;
-		// tomorrow: trigger boss spawn here
 		std::cout << "=== RUN COMPLETE === BOSS INCOMING ===" << std::endl;
+
+		sf::Vector2f bossPos = { m_Player.pos.x + 400.f, 746.f };
+		BossType pick = m_pool.PickBoss();
+
+		if (pick == BossType::Archer)
+		{
+			m_archers.push_back(m_pool.SpawnArcherBoss(bossPos));
+			std::cout << "Boss: Archer" << std::endl;
+		}
+		else
+		{
+			m_executioners.push_back(m_pool.SpawnExecutionerBoss(bossPos));
+			std::cout << "Boss: Executioner" << std::endl;
+		}
+
 		return;
 	}
 

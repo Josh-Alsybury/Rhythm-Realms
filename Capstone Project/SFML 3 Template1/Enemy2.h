@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include "EnemyTextures.h"
+#include "Arrow.h"
 
 class Enemy2
 {
@@ -14,7 +15,8 @@ public:
         Idle,
         Running,
         Attacking,
-        Defending
+        Defending,
+        ArrowRain
     };
 
     // Animation type enum 
@@ -33,6 +35,7 @@ public:
         int frameWidth = 0;
         int frameHeight = 0;
     };
+
 
     // --- Sprite and Movement ---
     sf::Vector2f pos;
@@ -98,6 +101,21 @@ public:
     void TakeDamage(int amount);
     void UpdateHealthBar();
     float DistanceToPlayer(sf::Vector2f playerPos);
+
+    // --- Attack boss System ---
+    void SetAsBoss();
+    bool m_isBoss = false;
+    bool has_RainArrow = false;
+    std::vector<Arrow> m_rainArrows;
+    float m_rainCooldown = 0.f;
+    float m_rainCooldownTime = 6.0f;
+    float m_rainTimer = 0.f;
+    float m_rainDuration = 3.0f;
+    float m_rainSpawnTimer = 0.f;
+    float m_rainSpawnInterval = 0.18f;
+    bool  m_isRaining = false;
+    bool  m_rainCanDamage = false;
+
 
 private:
     // AI & State

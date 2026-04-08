@@ -12,7 +12,8 @@ public:
         Idle,
         Walking,      // Changed from Running
         Attack1,      // First attack
-        Attack2       // Second attack
+        Attack2,       // Second attack
+        Jumping    // jumping arc attack ( boss fight only )  
     };
 
     // Animation type enum safe from vector reallocation
@@ -87,6 +88,19 @@ public:
     const float KNOCKBACK_FRICTION = 800.f;
     float m_flashTimer = 0.f;
     const float FLASH_DURATION = 0.1f;
+
+    // --- Attack boss System ---
+    void SetAsBoss();
+    bool m_isBoss = false;
+    bool m_isJumping = false;
+    sf::Vector2f m_jumpTarget;
+    float m_jumpTimer = 0.f;
+    float m_jumpDuration = 0.8f;
+    sf::Vector2f m_jumpStartPos;
+    float m_jumpPeakHeight = 220.f;
+    float m_jumpCooldown = 0.f;
+    float m_jumpCooldownTime = 3.5f;
+    bool  m_hasDealtJumpDamage = false;
 
     // --- Health System ---
     int health;

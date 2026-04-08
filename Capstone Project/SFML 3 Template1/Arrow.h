@@ -14,10 +14,13 @@ public:
 
     sf::Sprite sprite;
     bool active;
+    sf::Vector2f velocity;
+
+    void SetVelocity(sf::Vector2f vel) { velocity = vel; }
+    sf::Vector2f GetPosition() const { return position; }
 
 private:
     sf::Vector2f position;
-    sf::Vector2f velocity;
     static sf::Texture arrowTexture;
     static bool textureLoaded;
 };

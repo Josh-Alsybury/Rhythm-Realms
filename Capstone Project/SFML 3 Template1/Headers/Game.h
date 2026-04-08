@@ -37,7 +37,9 @@
 #include "BpmCombatSystem.h"
 #include "FuzzyBpmController.h"
 #include "Enemy3.h"
+#include "BossPool.h"
 #include <memory>
+
 
 
 const sf::Color WHITE{ 0, 0,0,0 }; // const colour
@@ -113,7 +115,7 @@ private:
 	bool m_showDebugCollision = false;
 
 	float m_runStartX = 500.f;
-	float m_runLength = 13000.f;
+	float m_runLength = 1000.f;
 	float m_distanceTravelled = 0.f;
 	bool m_runComplete = false;
 
@@ -135,6 +137,8 @@ private:
 	float m_playerXP = 0.f;
 	int m_playerLevel = 1;
 	float m_xpToNextLevel = 50.f;
+
+	Pool m_pool;
 
 	void awardXP(float amount);
 

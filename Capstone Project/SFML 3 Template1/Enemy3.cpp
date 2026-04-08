@@ -83,7 +83,7 @@ void Enemy3::SetupEnemy3()
     sprite->setScale(sf::Vector2f(2.5f, 2.5f));  // Executioner might be larger
     sprite->setPosition(pos);
     sprite->setTextureRect(sf::IntRect({ 0, 0 }, { 130, 92 }));
-    sprite->setOrigin(sf::Vector2f(65.f, 62.f)); 
+    sprite->setOrigin(sf::Vector2f(65.f, 62.f));
 
     currentAnimType = AnimationType::Idle;
 
@@ -134,6 +134,46 @@ void Enemy3::Update(float dt, sf::Vector2f playerPos)
 {
     Enemy3::Animation* anim = GetCurrentAnimation();
     assert(sprite && anim && anim->texture);
+
+    // ---- JUMP ARC (boss only) ----
+    if (state == EnemyState::Jumping)
+    {
+        m_jumpTimer += dt;
+        float t = m_jumpTimer / m_jumpDuration;
+
+        if (t >= 1.f)
+        {
+            pos = m_jumpTarget;
+            m_isJumping = false;
+            velocity = { 0.f, 0.f };
+
+            // Onetime slam hit on landing
+            if (!m_hasDealtJumpDamage)
+            {
+                canDamagePlayer = true;
+                m_hasDealtJumpDamage = true;
+            }
+
+            SetState(EnemyState::Idle);
+
+        }
+        else
+        {
+            float px = m_jumpStartPos.x + (m_jumpTarget.x - m_jumpStartPos.x) * t;
+            float py = m_jumpStartPos.y + (m_jumpTarget.y - m_jumpStartPos.y) * t
+                - (m_jumpPeakHeight * 4.f * t * (1.f - t));
+
+            pos.x = px;
+            pos.y = py;
+
+            if (sprite) sprite->setPosition(pos);
+            AnimateEnemy(dt);
+            UpdateHealthBar();
+            attackHitbox.setPosition(sf::Vector2f(
+                pos.x + (facingRight ? 70.f : -70.f), pos.y));
+            return;
+        }
+    }
 
     // Flash effect when damaged
     if (m_flashTimer > 0.f)
@@ -218,6 +258,7 @@ void Enemy3::Update(float dt, sf::Vector2f playerPos)
     {
         canDamagePlayer = false;
     }
+
 }
 
 void Enemy3::AnimateEnemy(float dt)
@@ -286,6 +327,7 @@ void Enemy3::SetState(EnemyState newState)
     case EnemyState::Walking:   newAnimType = AnimationType::Walking; break;
     case EnemyState::Attack1:   newAnimType = AnimationType::Attack1; break;
     case EnemyState::Attack2:   newAnimType = AnimationType::Attack2; break;
+    case EnemyState::Jumping:   newAnimType = AnimationType::Walking; break;
     }
 
     if (currentAnimType != newAnimType)
@@ -307,48 +349,73 @@ void Enemy3::SetState(EnemyState newState)
 void Enemy3::AIBehavior(sf::Vector2f playerPos, float dt)
 {
     if (m_isStunned) return;
+    if (state == EnemyState::Jumping) return;
 
     float distance = DistanceToPlayer(playerPos);
-
-    // Determine facing direction
     facingRight = (playerPos.x > pos.x);
 
-    // Decrease cooldown timer
-    if (attackCooldown > 0.f)
-        attackCooldown -= dt;
+    if (attackCooldown > 0.f)   attackCooldown -= dt;
+    if (m_jumpCooldown > 0.f)   m_jumpCooldown -= dt;
 
-    // --- ATTACK ---
-    if ((state != EnemyState::Attack1 && state != EnemyState::Attack2) &&
-        distance <= attackRange && attackCooldown <= 0.f)
+    if (!m_isBoss)
     {
-        // Start attack
-        if (m_lastAttackUsed == 1)
+        if (distance <= attackRange && attackCooldown <= 0.f
+            && state != EnemyState::Attack1
+            && state != EnemyState::Attack2)
         {
-            SetState(EnemyState::Attack2);
-            m_lastAttackUsed = 2;
+            if (m_lastAttackUsed == 1) { SetState(EnemyState::Attack2); m_lastAttackUsed = 2; }
+            else { SetState(EnemyState::Attack1); m_lastAttackUsed = 1; }
+            velocity.x = 0.f;
+        }
+        else if (distance > attackRange && distance <= detectionRange)
+        {
+            SetState(EnemyState::Walking);
+            velocity.x = (facingRight ? 1.f : -1.f) * speed;
         }
         else
         {
-            SetState(EnemyState::Attack1);
-            m_lastAttackUsed = 1;
+            SetState(EnemyState::Idle);
+            velocity.x = 0.f;
         }
-
-        velocity.x = 0.f; // stop moving while attacking
     }
-    // --- CHASE ---
-    else if (distance > attackRange && distance <= detectionRange)
+    else
     {
-        SetState(EnemyState::Walking);
-        velocity.x = (facingRight ? 1.f : -1.f) * speed;
-    }
-    // --- IDLE ---
-    else if (distance > detectionRange)
-    {
-        SetState(EnemyState::Idle);
-        velocity.x = 0.f;
-    }
+        bool jumpReady = (m_jumpCooldown <= 0.f);
+        bool playerMidRange = (distance > attackRange && distance < 420.f);
 
+        if (jumpReady && playerMidRange)
+        {
+            m_jumpStartPos = pos;
+            m_jumpTarget = playerPos;
+            m_jumpTimer = 0.f;
+            m_isJumping = true;
+            m_hasDealtJumpDamage = false;
+            m_jumpCooldown = m_jumpCooldownTime;
+            SetState(EnemyState::Jumping);
+            velocity.x = 0.f;
+            velocity.y = 0.f;
+        }
+        else if (distance <= attackRange && attackCooldown <= 0.f
+            && state != EnemyState::Attack1
+            && state != EnemyState::Attack2)
+        {
+            if (m_lastAttackUsed == 1) { SetState(EnemyState::Attack2); m_lastAttackUsed = 2; }
+            else { SetState(EnemyState::Attack1); m_lastAttackUsed = 1; }
+            velocity.x = 0.f;
+        }
+        else if (distance > attackRange && distance <= detectionRange)
+        {
+            SetState(EnemyState::Walking);
+            velocity.x = (facingRight ? 1.f : -1.f) * speed;
+        }
+        else if (distance > detectionRange)
+        {
+            SetState(EnemyState::Idle);
+            velocity.x = 0.f;
+        }
+    }
 }
+
 void Enemy3::UpdateHealthBar()
 {
     healthBar.clear();
@@ -390,4 +457,24 @@ float Enemy3::DistanceToPlayer(sf::Vector2f playerPos)
     float dx = playerPos.x - pos.x;
     float dy = playerPos.y - pos.y;
     return std::sqrt(dx * dx + dy * dy);
+}
+
+void Enemy3::SetAsBoss()
+{
+    if (m_isBoss) return;
+    m_isBoss = true;
+
+    MAX_HEALTH = 24;
+    health = MAX_HEALTH;
+
+    if (sprite)
+        sprite->setScale(sf::Vector2f(3.5f, 3.5f));
+
+    speed = 55.f;
+    attackRange = 140.f;
+    detectionRange = 700.f;
+    attackCooldownTime = 1.5f;
+    m_jumpCooldownTime = 3.5f;
+
+    UpdateHealthBar();
 }

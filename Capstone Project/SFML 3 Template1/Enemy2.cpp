@@ -49,6 +49,13 @@ void Enemy2::Reset()
     // Reset to idle animation
     currentAnimType = AnimationType::Idle;
 
+    m_rainCooldown = 0.f;
+    m_rainTimer = 0.f;
+    m_rainSpawnTimer = 0.f;
+    m_isRaining = false;
+    m_rainCanDamage = false;
+    m_rainArrows.clear();
+
     UpdateHealthBar();
 }
 
@@ -118,6 +125,7 @@ void Enemy2::SetupEnemy2()
         m_stunStarsInitialized = true;
     }
 
+
     UpdateHealthBar();
 }
 
@@ -162,6 +170,65 @@ void Enemy2::Update(float dt, sf::Vector2f playerPos)
         {
             float xOffset = (i - 1) * 20.f;
             m_stunStars[i].setPosition({ pos.x + xOffset, pos.y - 120.f + bounceOffset });
+        }
+
+        sprite->setPosition(pos);
+        AnimateEnemy(dt);
+        UpdateHealthBar();
+        return;
+    }
+
+    if (m_isRaining)
+    {
+        m_rainTimer += dt;
+        m_rainSpawnTimer += dt;
+        // DON'T reset m_rainCanDamage here anymore
+
+        if (m_rainTimer < m_rainDuration && m_rainSpawnTimer >= m_rainSpawnInterval)
+        {
+            m_rainSpawnTimer = 0.f;
+            float spawnX = 100.f + static_cast<float>(rand()) /
+                static_cast<float>(RAND_MAX) * 1400.f;
+
+            Arrow ra({ spawnX, -20.f }, true, 0.f);
+            ra.SetVelocity({ 0.f, 420.f });
+            ra.sprite.setRotation(sf::degrees(90.f));
+            ra.active = true;
+            m_rainArrows.push_back(std::move(ra));
+        }
+
+        for (auto& ra : m_rainArrows)
+        {
+            if (!ra.active) continue;
+            ra.Update(dt);
+
+            if (ra.GetPosition().y > 900.f)
+            {
+                ra.active = false;
+                continue;
+            }
+
+            sf::Vector2f aPos = ra.GetPosition();
+            float dx = aPos.x - playerPos.x;
+            float dy = aPos.y - playerPos.y;
+            if (std::sqrt(dx * dx + dy * dy) < 55.f)
+            {
+                m_rainCanDamage = true;  // set true, Game.cpp clears it after handling
+                ra.active = false;
+            }
+        }
+
+        m_rainArrows.erase(
+            std::remove_if(m_rainArrows.begin(), m_rainArrows.end(),
+                [](const Arrow& a) { return !a.active; }),
+            m_rainArrows.end()
+        );
+
+        if (m_rainTimer >= m_rainDuration && m_rainArrows.empty())
+        {
+            m_isRaining = false;
+            float distance = DistanceToPlayer(playerPos);
+            SetState(distance <= detectionRange ? ArcherState::Running : ArcherState::Idle);
         }
 
         sprite->setPosition(pos);
@@ -278,6 +345,7 @@ void Enemy2::SetState(ArcherState newState)
     case ArcherState::Running:   newAnimType = AnimationType::Running;   break;
     case ArcherState::Attacking: newAnimType = AnimationType::Attacking; break;
     case ArcherState::Defending: newAnimType = AnimationType::Defending; break;
+    case ArcherState::ArrowRain: newAnimType = AnimationType::Idle; break;
     }
 
     if (currentAnimType != newAnimType)
@@ -309,6 +377,20 @@ void Enemy2::AIBehavior(sf::Vector2f playerPos, float dt)
     // Decrease cooldown timer
     if (attackCooldown > 0.f)
         attackCooldown -= dt;
+
+    if (m_rainCooldown > 0.f)   m_rainCooldown -= dt;
+
+    if (m_isBoss && has_RainArrow && m_rainCooldown <= 0.f && !m_isRaining
+        && distance > preferredDistance && distance <= detectionRange)
+    {
+        m_isRaining = true;
+        m_rainTimer = 0.f;
+        m_rainSpawnTimer = 0.f;
+        m_rainCooldown = m_rainCooldownTime;
+        SetState(ArcherState::ArrowRain);
+        velocity.x = 0.f;
+        return;
+    }
 
     // --- TOO CLOSE - BACK AWAY (closer threshold) ---
     if (distance < preferredDistance - 50.f)  // CHANGED: 50px buffer (was 80)
@@ -367,6 +449,8 @@ void Enemy2::UpdateHealthBar()
 {
     healthBar.clear();
 
+    if (m_isBoss) return;
+
     for (int i = 0; i < health; ++i)
     {
         sf::RectangleShape bar;
@@ -393,4 +477,23 @@ float Enemy2::DistanceToPlayer(sf::Vector2f playerPos)
     float dx = playerPos.x - pos.x;
     float dy = playerPos.y - pos.y;
     return std::sqrt(dx * dx + dy * dy);
+}
+
+void Enemy2::SetAsBoss()
+{
+    if (m_isBoss) return;
+    m_isBoss = true;
+    has_RainArrow = true;
+
+    MAX_HEALTH = 18;
+    health = MAX_HEALTH;
+
+    if (sprite)
+        sprite->setScale(sf::Vector2f(3.5f, 3.5f));
+
+    speed = 55.f;
+    detectionRange = 700.f;
+    attackCooldownTime = 1.5f;
+
+    UpdateHealthBar();
 }
