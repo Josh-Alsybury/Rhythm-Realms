@@ -981,13 +981,20 @@ void Game::update(sf::Time t_deltaTime)
 
 						if (archer.health <= 0)
 						{
-							std::cout << "Archer defeated!" << std::endl;
-
-							float timingMultiplier = 1.0f;
-							if (m_Player.m_damageMultiplier >= 2.0f) timingMultiplier = 2.0f;
-							else if (m_Player.m_damageMultiplier >= 1.5f) timingMultiplier = 1.5f;
-
-							awardXP(10.f * timingMultiplier * fuzzyParams.xpMultiplier);
+							if (archer.m_isBoss)
+							{
+								std::cout << "ARCHER BOSS DEFEATED!" << std::endl;
+								awardXP(30.f * fuzzyParams.xpMultiplier);
+								m_Player.health = 0;
+							}
+							else
+							{
+								std::cout << "Archer defeated!" << std::endl;
+								float timingMultiplier = 1.0f;
+								if (m_Player.m_damageMultiplier >= 2.0f) timingMultiplier = 2.0f;
+								else if (m_Player.m_damageMultiplier >= 1.5f) timingMultiplier = 1.5f;
+								awardXP(10.f * timingMultiplier * fuzzyParams.xpMultiplier);
+							}
 						}
 					}
 				}
@@ -1067,6 +1074,7 @@ void Game::update(sf::Time t_deltaTime)
 							if (m_Player.m_damageMultiplier >= 2.0f) timingMultiplier = 2.0f;
 							else if (m_Player.m_damageMultiplier >= 1.5f) timingMultiplier = 1.5f;
 							awardXP(30.f * timingMultiplier * fuzzyParams.xpMultiplier);
+							m_Player.health = 0;
 						}
 					}
 				}
